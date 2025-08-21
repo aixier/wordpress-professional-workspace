@@ -1,0 +1,25 @@
+# WP-CLI配置文件
+path: /var/www/html
+
+# 默认配置
+core:
+  locale: zh_CN
+  
+# 调试配置
+debug: true
+quiet: false
+
+# 颜色输出
+color: true
+
+# 跳过插件和主题加载（用于故障排除）
+# skip-plugins:
+#   - plugin-name
+# skip-themes:
+#   - theme-name
+
+# Apache/Nginx用户
+user: www-data
+
+# 默认格式
+format: table

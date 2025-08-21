@@ -1,151 +1,287 @@
-# WordPress 专业开发工作空间
+# CardPlanet WordPress Development Workspace
 
-## 🏗️ 项目结构
+> 🚀 Professional WordPress development environment with seamless migration tools and modern development workflow
 
-基于WordPress开发最佳实践重新设计的专业级工作空间，支持完整的开发→测试→生产工作流程。
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![WordPress](https://img.shields.io/badge/WordPress-6.8+-blue.svg)](https://wordpress.org/)
+[![Docker](https://img.shields.io/badge/Docker-supported-blue.svg)](https://www.docker.com/)
+[![PHP](https://img.shields.io/badge/PHP-7.4+-purple.svg)](https://php.net/)
+
+**CardPlanet WordPress Workspace** is an open-source development environment designed for efficient WordPress theme development, website migration, and modern development workflows. Built with Docker containerization and industry best practices.
+
+## 🌟 Features
+
+- **🔧 Modern Development Environment**: Containerized WordPress setup with hot-reload
+- **📦 Clean Project Structure**: Separation of source code, runtime, and documentation  
+- **🚀 One-Click Setup**: Get started in under 60 seconds with `make setup`
+- **🎨 Theme Development**: Advanced scaffolding and build tools for WordPress themes
+- **🔄 Migration Tools**: Convert static sites to WordPress with automated workflows
+- **📚 Comprehensive Documentation**: Detailed guides for every aspect of development
+- **🐳 Docker First**: Full containerization with production-ready configurations
+- **⚙️ Automated Workflows**: Build, test, and deploy with simple commands
+
+## 🏗️ Project Structure
 
 ```
-wordpress_pages/
-├── 🔧 src/                    # 源码开发区
-├── 🚀 app/                    # WordPress运行实例
-├── 🏗️ infrastructure/        # 基础设施配置
-├── 📚 docs/                   # 文档系统
-├── 📦 resources/              # 资源素材
-└── 🛠️ tools/                  # 开发工具
+cardplanet-wordpress/
+├── 🚀 wordpress/          # WordPress runtime instance (isolated)
+├── 🔧 src/                # Development source code (version controlled)
+├── 🐳 docker/             # Container configurations
+├── 📚 docs/               # Documentation system
+├── ⚙️ scripts/            # Automation scripts
+├── 📦 resources/          # Project assets and templates
+├── Makefile              # Quick commands
+└── README.md             # Project overview
 ```
 
-## 🚀 快速开始
+### Key Directories
 
-### 1. 启动开发环境
+| Directory | Purpose | Description |
+|-----------|---------|-------------|
+| `wordpress/` | Runtime | WordPress installation and runtime files |
+| `src/` | Development | Theme and plugin source code |
+| `docker/` | Infrastructure | Docker and container configurations |
+| `docs/` | Documentation | Guides, references, and examples |
+| `scripts/` | Automation | Build, deploy, and utility scripts |
+| `resources/` | Assets | Templates, designs, and backup files |
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/get-started) (20.10+)
+- [Docker Compose](https://docs.docker.com/compose/install/) (2.0+)
+- [Make](https://www.gnu.org/software/make/) (optional, for shortcuts)
+
+### Installation
+
 ```bash
-# 启动Docker环境
-cd infrastructure/docker
-docker-compose up -d
+# 1. Clone the repository
+git clone https://github.com/your-username/cardplanet-wordpress.git
+cd cardplanet-wordpress
 
-# 访问WordPress
+# 2. Setup environment
+cp .env.example .env
+
+# 3. Start development environment
+make setup
+# or: ./scripts/setup.sh
+
+# 4. Access your WordPress site
 open http://localhost:8080
 ```
 
-### 2. 开发主题
+**That's it!** 🎉 Your WordPress development environment is ready.
+
+### Default Access
+
+- **Website**: http://localhost:8080  
+- **Admin Panel**: http://localhost:8080/wp-admin
+- **Database**: http://localhost:8081 (phpMyAdmin)
+- **Credentials**: `admin` / `admin123`
+
+## 📚 Documentation
+
+| Topic | Description | Link |
+|-------|-------------|------|
+| **Setup Guide** | Initial environment setup | [docs/setup/](docs/setup/) |
+| **Theme Development** | WordPress theme development | [docs/development/](docs/development/) |
+| **Migration Guide** | Static to WordPress migration | [docs/reference/sop.md](docs/reference/sop.md) |
+| **Deployment** | Production deployment | [docs/deployment/](docs/deployment/) |
+| **API Reference** | Development APIs and hooks | [docs/api/](docs/api/) |
+
+## ⚡ Quick Commands
+
+| Command | Description |
+|---------|-------------|
+| `make setup` | Initialize development environment |
+| `make build` | Build and deploy themes |
+| `make deploy` | Deploy changes to WordPress |
+| `make clean` | Stop containers and clean up |
+| `make help` | Show all available commands |
+
+## 🎨 Theme Development
+
+### Creating a New Theme
+
 ```bash
-# 在src/themes/目录开发主题
-cd src/themes
-# 开发完成后构建到app/wp-content/themes/
+# Generate theme scaffold
+./scripts/create-theme.sh my-theme
+
+# Start development
+cd src/themes/my-theme
+# Edit files...
+
+# Build and deploy
+make build
 ```
 
-### 3. 查看文档
-```bash
-# 查看开发指南
-cat docs/guides/development/README.md
+### Development Workflow
 
-# 查看迁移指南
-cat docs/guides/migration/README.md
+1. **Edit** source files in `src/themes/your-theme/`
+2. **Build** with `make build` (auto-copies to WordPress)
+3. **Preview** at http://localhost:8080
+4. **Repeat** until satisfied
+
+## 🔄 Website Migration
+
+Convert static websites to WordPress themes with our automated migration tools.
+
+### Migration Process
+
+```bash
+# 1. Place original website in resources/
+cp -r /path/to/static-site resources/original-sites/my-site/
+
+# 2. Run migration analysis
+./scripts/analyze-site.sh my-site
+
+# 3. Generate WordPress theme
+./scripts/generate-theme.sh my-site
+
+# 4. Review and customize
+cd src/themes/my-site-theme/
 ```
 
-## 📁 目录说明
+📖 **Detailed Guide**: [docs/reference/sop.md](docs/reference/sop.md)
 
-### 🔧 src/ - 源码开发区
-开发者工作的主要区域，包含所有源代码和开发资源。
-- `themes/` - 主题开发源码
-- `plugins/` - 插件开发源码  
-- `assets/` - 开发资源（图片、字体、图标）
+## 🐳 Docker Configuration
 
-### 🚀 app/ - WordPress运行实例
-标准的WordPress安装，用于测试和预览开发成果。
-- 遵循WordPress官方目录结构
-- 包含所有WordPress核心文件
-- 从src/构建的主题和插件在此运行
+### Services
 
-### 🏗️ infrastructure/ - 基础设施
-环境配置和自动化工具，支持容器化部署。
-- `docker/` - Docker配置文件
-- `database/` - 数据库配置和备份
-- `scripts/` - 自动化脚本
-- `config/` - 环境配置
+- **WordPress** (port 8080): Main application
+- **MySQL** (port 3306): Database  
+- **phpMyAdmin** (port 8081): Database management
+- **WP-CLI**: Command-line tools
 
-### 📚 docs/ - 文档系统
-完整的项目文档，涵盖开发、部署、维护各个方面。
-- `guides/` - 详细操作指南
-- `examples/` - 实际案例和教程
-- `api/` - API文档和参考
-- `reference/` - 最佳实践和标准
+### Environment Variables
 
-### 📦 resources/ - 资源素材
-项目相关的所有资源文件和备份。
-- `original-sites/` - 原始网站文件
-- `templates/` - 主题和插件模板
-- `design-assets/` - 设计资源
-- `backups/` - 各类备份文件
+```bash
+# .env file
+DB_NAME=wordpress
+DB_USER=wordpress  
+DB_PASSWORD=secure_password
+WORDPRESS_PORT=8080
+PHPMYADMIN_PORT=8081
+```
 
-### 🛠️ tools/ - 开发工具
-专业的开发工具链，提升开发效率。
-- `migration/` - 网站迁移工具
-- `testing/` - 测试工具套件
-- `deployment/` - 部署自动化
-- `utilities/` - 实用工具集
+## 🛠️ Development Tools
 
-## 🔄 工作流程
+### Built-in Scripts
 
-### 开发流程
-1. **设计阶段**: 在 `resources/design-assets/` 管理设计稿
-2. **开发阶段**: 在 `src/` 目录进行代码开发
-3. **测试阶段**: 使用 `tools/testing/` 进行测试
-4. **构建阶段**: 构建到 `app/` 进行验证
-5. **部署阶段**: 使用 `infrastructure/` 自动化部署
+| Script | Purpose |
+|--------|---------|
+| `scripts/setup.sh` | Environment initialization |
+| `scripts/build.sh` | Theme building and deployment |
+| `scripts/deploy.sh` | Production deployment |
+| `scripts/backup.sh` | Database and file backups |
 
-### 迁移流程
-1. **分析阶段**: 将原网站放入 `resources/original-sites/`
-2. **提取阶段**: 使用 `tools/migration/` 分析提取
-3. **开发阶段**: 在 `src/themes/` 开发WordPress主题
-4. **测试阶段**: 在 `app/` 环境验证效果
-5. **文档阶段**: 在 `docs/examples/` 记录案例
+### WP-CLI Integration
 
-## 📖 文档导航
+```bash
+# Install plugins
+docker exec -it wordpress_wp wp plugin install advanced-custom-fields --activate
 
-- **新手入门**: `docs/guides/setup/`
-- **开发指南**: `docs/guides/development/`
-- **迁移指南**: `docs/guides/migration/`
-- **部署指南**: `docs/guides/deployment/`
-- **故障排查**: `docs/guides/troubleshooting/`
-- **API文档**: `docs/api/`
-- **最佳实践**: `docs/reference/best-practices/`
+# Create users  
+docker exec -it wordpress_wp wp user create john john@example.com --role=author
 
-## 🏆 特色功能
+# Database operations
+docker exec -it wordpress_wp wp db export backup.sql
+```
 
-### ✅ 专业级开发环境
-- 容器化开发环境，一键启动
-- 标准WordPress目录结构
-- 完整的开发工具链
+## 🧪 Examples & Templates
 
-### ✅ 高效迁移工具
-- 自动化网站分析工具
-- 智能内容提取
-- 主题生成器
+### CardPlanet Theme
 
-### ✅ 完整文档体系
-- 详细的操作指南
-- 丰富的实际案例
-- 最佳实践总结
+A complete example of modern WordPress theme development:
 
-### ✅ 版本控制友好
-- 清晰的源码分离
-- 合理的.gitignore配置
-- 配置即代码理念
+- **Location**: `src/themes/cardplanet/`
+- **Features**: Responsive design, ACF integration, modern CSS
+- **Demo**: `docs/examples/cardplanet-demo/`
 
-## 🔧 技术栈
+### Migration Examples
 
-- **后端**: WordPress + PHP + MySQL
-- **前端**: HTML5 + CSS3 + JavaScript
-- **容器**: Docker + Docker Compose
-- **工具**: WP-CLI + Node.js + Composer
-- **文档**: Markdown + GitHub Pages
+Real-world migration examples with before/after comparisons:
 
-## 📞 获取支持
+- **Apple.com Homepage**: `resources/original-sites/apple.com/`
+- **CardPlanet.me**: `resources/original-sites/cardplanet.me/`
 
-- **文档**: 查看 `docs/` 目录下的详细指南
-- **示例**: 参考 `docs/examples/` 中的实际案例
-- **工具**: 使用 `tools/` 目录下的专业工具
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](docs/reference/CONTRIBUTING.md).
+
+### Development Setup
+
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Make changes and test
+4. Submit pull request
+
+### Code Style
+
+- **PHP**: Follow WordPress Coding Standards
+- **CSS**: Use BEM methodology
+- **JavaScript**: ESNext with proper linting
+- **Documentation**: Clear, concise Markdown
+
+## 📋 Requirements
+
+### System Requirements
+
+- **OS**: Linux, macOS, Windows (WSL2)
+- **Memory**: 4GB RAM minimum
+- **Storage**: 2GB free space
+- **Network**: Internet connection for initial setup
+
+### Software Dependencies
+
+- Docker 20.10+
+- Docker Compose 2.0+
+- Git 2.20+
+- Modern web browser
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| Port conflicts | Change ports in `.env` file |
+| Permission errors | Run `chmod +x scripts/*` |
+| Container won't start | Check Docker is running |
+| WordPress won't load | Wait for MySQL initialization |
+
+### Getting Help
+
+1. Check [Troubleshooting Guide](docs/reference/troubleshooting.md)
+2. Search [existing issues](https://github.com/your-username/cardplanet-wordpress/issues)
+3. Create [new issue](https://github.com/your-username/cardplanet-wordpress/issues/new)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [WordPress](https://wordpress.org/) - The platform that powers the web
+- [Docker](https://www.docker.com/) - Containerization technology
+- [WP-CLI](https://wp-cli.org/) - Command-line interface for WordPress
+- Open source community for inspiration and contributions
+
+## 🚀 What's Next?
+
+- [ ] **Theme Builder GUI** - Visual theme creation interface
+- [ ] **Plugin Scaffolding** - Automated plugin generation
+- [ ] **CI/CD Integration** - GitHub Actions workflows  
+- [ ] **Multi-site Support** - WordPress multisite configuration
+- [ ] **Performance Monitoring** - Built-in performance analytics
 
 ---
 
-**这个工作空间提供了从网站分析到WordPress部署的完整解决方案，适用于个人项目到企业级网站的各种需求。**
+<div align="center">
+
+**⭐ If this project helps you, please star it on GitHub! ⭐**
+
+[Documentation](docs/) • [Examples](docs/examples/) • [Issues](https://github.com/your-username/cardplanet-wordpress/issues) • [Contributing](docs/reference/CONTRIBUTING.md)
+
+</div>
