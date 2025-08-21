@@ -1,0 +1,71 @@
+# WordPress Core Files
+/wordpress/wp-admin/
+/wordpress/wp-includes/
+/wordpress/wp-*.php
+/wordpress/xmlrpc.php
+/wordpress/license.txt
+/wordpress/readme.html
+
+# Configuration Files
+wp-config.php
+wp-config-local.php
+
+# Uploads and Content
+/uploads/
+/wordpress/wp-content/uploads/
+*.log
+
+# Development Dependencies
+node_modules/
+/vendor/
+composer.lock
+package-lock.json
+.DS_Store
+.vscode/
+.idea/
+
+# Docker & Environment
+.env
+.env.local
+docker-compose.override.yml
+
+# Backups
+/backups/
+*.sql
+*.sql.gz
+/tmp/
+
+# Build Assets
+/themes/*/node_modules/
+/themes/*/dist/
+/themes/*/.sass-cache/
+
+# System Files
+Thumbs.db
+*.tmp
+*.swp
+*.swo
+*~
+
+# Development Tools
+.phpcs.xml
+.stylelintrc
+.eslintrc
+
+# Cache
+/wordpress/wp-content/cache/
+/wordpress/wp-content/backup/
+*.cache
+
+# Plugin Development
+/plugins/*/node_modules/
+/plugins/*/vendor/
+
+# Keep these directories but ignore content
+/wordpress/wp-content/plugins/*
+!/wordpress/wp-content/plugins/.gitkeep
+/wordpress/wp-content/themes/*
+!/wordpress/wp-content/themes/cardplanet-theme/
+
+# Custom theme - track only our custom theme
+!/themes/cardplanet-theme/

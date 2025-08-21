@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: ${PROJECT_NAME:-wpmigration}_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secure_root_password}
+      MYSQL_DATABASE: ${DB_NAME:-wordpress}
+      MYSQL_USER: ${DB_USER:-wordpress}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-wordpress}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - wordpress_network
+    restart: unless-stopped
+
+  wordpress:
+    image: wordpress:latest
+    container_name: ${PROJECT_NAME:-wpmigration}_wp
+    depends_on:
+      - mysql
+    ports:
+      - "${WORDPRESS_PORT:-8080}:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_USER: ${DB_USER:-wordpress}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-wordpress}
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
+      WORDPRESS_DEBUG: 1
+    volumes:
+      - wordpress_data:/var/www/html/wp-content
+      # Mount your custom theme here during development
+      # - ./themes/your-theme:/var/www/html/wp-content/themes/your-theme
+    networks:
+      - wordpress_network
+    restart: unless-stopped
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ${PROJECT_NAME:-wpmigration}_pma
+    depends_on:
+      - mysql
+    ports:
+      - "${PHPMYADMIN_PORT:-8081}:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: ${DB_USER:-wordpress}
+      PMA_PASSWORD: ${DB_PASSWORD:-wordpress}
+    networks:
+      - wordpress_network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+    driver: local
+  wordpress_data:
+    driver: local
+
+networks:
+  wordpress_network:
+    driver: bridge
+
+# Usage:
+# 1. Copy .env.example to .env and customize your settings
+# 2. Run: docker-compose up -d
+# 3. Access WordPress at http://localhost:8080
+# 4. Access phpMyAdmin at http://localhost:8081

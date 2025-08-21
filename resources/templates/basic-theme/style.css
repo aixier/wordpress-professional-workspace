@@ -1,0 +1,18 @@
+/*
+Theme Name: Basic Migration Theme
+Description: A starter template for HTML to WordPress migrations
+Author: WordPress Migration Toolkit
+Version: 1.0.0
+Text Domain: basic-theme
+*/
+
+/* 
+This file will contain the migrated CSS from your original HTML site.
+Copy and paste your original CSS styles below this comment.
+*/
+
+/* Basic WordPress compatibility styles */
+body {
+    margin: 0;
+    padding: 0;
+}
