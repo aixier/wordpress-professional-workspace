@@ -1,0 +1,56 @@
+{
+  "Hero": {
+    "cta": {
+      "title": "立即安装TubeScanner",
+      "subtitle": "让您的跨境社媒运营更专业、更高效！",
+      "description": "发现优质账号，获取市场洞察，制定制胜策略。"
+    },
+    "content": {
+      "title1": "立即安装TubeScanner，",
+      "title2": "一键发现优质账号，获取市场洞察，",
+      "title3": "",
+      "title4": "助力跨境电商制胜！"
+    },
+    "description": ""
+  },
+  "SocialProof": {
+    "maker": "制作者快速开发"
+  },
+  "Showcase": {
+    "title": "Showcase",
+    "description": "与1000+创作者一起，使用我们的落地页模板提升转化率"
+  },
+  "Feature": {
+    "title": "Feature"
+  },
+  "Pricing": {
+    "title": "定价",
+    "title2": "拥有无限访问权限",
+    "description": "你当前查看的页面是一个开源的、免费的模板。",
+    "doYouLike": "你喜欢这个落地页模板吗？",
+    "follow": "关注我的推特。"
+  },
+  "Testimonials": {
+    "title": "Testimonials",
+    "description1": "如果你使用这个落地页模板并在推特上推荐了，",
+    "description2": "请告诉我",
+    "description3": "，我会在这里展示你的推文和推荐。"
+  },
+  "FAQ": {
+    "title": "FAQs",
+    "description": "这里有一些最常见的问题。"
+  },
+  "CTA": {
+    "title": "立即安装 TubeScanner，",
+    "title1": "让您的跨境社媒运营更专业、更高效！",
+    "title2": "发现优质账号，获取市场洞察，制定制胜策略。",
+    "description3": "",
+    "description4": "",
+    "description5": "",
+    "description6": ""
+  },
+  "CTAButton": {
+    "title": "立即使用"
+  }
+}
+

@@ -1,0 +1,85 @@
+# WP-CLI Configuration for Development Environment
+# This file provides default settings for WP-CLI commands
+
+# Global configuration
+user: www-data
+path: /var/www/html
+
+# Server configuration
+url: http://localhost
+debug: true
+quiet: false
+
+# Cache configuration
+cache_dir: /tmp/wp-cli-cache
+
+# Package configuration
+packages_dir: /var/www/.wp-cli/packages
+
+# Core configuration
+core config:
+  dbname: wordpress
+  dbuser: wordpress
+  dbpass: wordpress
+  dbhost: mysql:3306
+  locale: zh_CN
+  extra-php: |
+    // Development settings
+    define('WP_DEBUG', true);
+    define('WP_DEBUG_LOG', true);
+    define('WP_DEBUG_DISPLAY', false);
+    define('SCRIPT_DEBUG', true);
+    define('SAVEQUERIES', true);
+    
+    // Security settings
+    define('DISALLOW_FILE_EDIT', false);
+    define('AUTOMATIC_UPDATER_DISABLED', true);
+    
+    // Performance settings
+    define('WP_MEMORY_LIMIT', '512M');
+    define('WP_MAX_MEMORY_LIMIT', '512M');
+    
+    // SSL settings for development
+    if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        $_SERVER['HTTPS'] = 'on';
+    }
+
+# Default commands configuration
+core install:
+  title: "WordPress Development Site"
+  admin_user: admin
+  admin_email: admin@localhost.local
+  skip-email: true
+
+# Plugin configuration
+plugin:
+  activate:
+    - classic-editor
+  install:
+    - query-monitor
+    - debug-bar
+    - log-deprecated-notices
+
+# Theme configuration  
+theme:
+  activate: twentytwentyfour
+
+# Database configuration
+db:
+  charset: utf8mb4
+  collate: utf8mb4_unicode_ci
+
+# Language configuration
+language core install:
+  - zh_CN
+  - en_US
+
+# Media configuration
+media:
+  max_image_width: 1920
+  max_image_height: 1080
+
+# Performance configuration
+transient:
+  delete-expired: true
+  delete-all: false

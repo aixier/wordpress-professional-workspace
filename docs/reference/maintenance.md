@@ -1,477 +1,673 @@
-# WordPress网站内容更新手册
+# WordPress 客户站点运维手册
 
 ## 📋 概述
-本手册提供WordPress网站迁移完成后的内容管理、更新和维护的标准化流程。适用于已完成迁移的WordPress网站的日常内容管理。
+
+本手册适用于基于 `coopotfan/wordpress-dev` 镜像交付的客户WordPress站点的运维管理。提供完整的监控、维护、更新和故障处理流程。
+
+## 🎯 运维管理模式
+
+### 核心理念
+- **容器化运维**: 基于Docker容器的标准化管理
+- **CLI驱动操作**: 通过WP-CLI实现自动化运维
+- **预防性维护**: 主动监控和预防问题
+- **快速响应**: 标准化的故障处理流程
 
 ---
 
-## 🎯 内容更新策略
+## 🔍 Phase 1: 日常监控检查
 
-### 更新类型分类
-1. **紧急更新**: 错误修复、安全补丁
-2. **常规更新**: 文字内容、图片替换
-3. **功能更新**: 新页面、新功能模块
-4. **设计更新**: 样式调整、布局优化
+### 1.1 基础健康检查
 
----
-
-## 🔧 Phase 1: 开发环境准备
-
-### 1.1 连接到现有WordPress环境
-```bash
-# 检查现有容器状态
-docker ps --filter "name=[client-name]" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-# 如果容器未运行，重新启动
-docker start [client-name]_mysql [client-name]_wp [client-name]_pma
-
-# 验证网站访问
-curl -I http://localhost:8080/
-```
-
-### 1.2 备份当前状态
-```bash
-# 创建备份目录
-mkdir -p backups/$(date +%Y%m%d_%H%M%S)
-
-# 备份主题文件
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme backups/$(date +%Y%m%d_%H%M%S)/
-
-# 备份数据库
-docker exec [client-name]_mysql mysqldump -uwordpress -pwordpress wordpress > backups/$(date +%Y%m%d_%H%M%S)/wordpress-backup.sql
-
-# 创建备份日志
-echo "备份时间: $(date)" > backups/$(date +%Y%m%d_%H%M%S)/backup-log.txt
-echo "备份原因: [更新原因]" >> backups/$(date +%Y%m%d_%H%M%S)/backup-log.txt
-```
-
----
-
-## 📝 Phase 2: 内容更新操作
-
-### 2.1 文字内容更新
-
-**方法1: 直接编辑主题文件**
-```bash
-# 从容器复制文件到本地
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php ./temp-index.php
-
-# 编辑文件 (使用文本编辑器)
-# 修改完成后复制回容器
-docker cp ./temp-index.php [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php
-
-# 验证更改
-curl -s http://localhost:8080/ | grep "新内容关键词"
-```
-
-**方法2: 使用WordPress后台**
-```bash
-# 访问WordPress后台
-# http://localhost:8080/wp-admin/
-
-# 创建管理员账户 (如果还未创建)
-docker exec [client-name]_wp wp --allow-root user create admin admin@example.com --role=administrator --user_pass=admin_password
-```
-
-### 2.2 图片和媒体更新
-
-**更新步骤：**
-```bash
-# 1. 准备新的媒体文件
-mkdir temp-media
-# 将新的图片文件放到temp-media目录
-
-# 2. 备份原始媒体文件
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/assets/images/ ./backup-images/
-
-# 3. 上传新媒体文件
-docker cp temp-media/new-image.jpg [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/assets/images/
-
-# 4. 更新HTML中的引用
-# 编辑主题文件，更新图片路径
-```
-
-### 2.3 样式更新 (CSS修改)
-
-**小幅样式调整：**
-```bash
-# 复制CSS文件到本地
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/style.css ./temp-style.css
-
-# 编辑CSS文件
-# 例如：修改颜色、字体大小、间距等
-
-# 复制回容器
-docker cp ./temp-style.css [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/style.css
-
-# 清除浏览器缓存并验证
-curl -s http://localhost:8080/ | head -20
-```
-
-**重大样式更改：**
-```bash
-# 创建新的CSS文件版本
-cp style.css style-v2.css
-
-# 在functions.php中更新版本号
-# wp_enqueue_style('[client-name]-main', get_template_directory_uri() . '/style.css', array(), '2.0.0');
-
-# 测试更改
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/style.css
-```
-
----
-
-## 🏗️ Phase 3: 功能模块更新
-
-### 3.1 添加新页面
-
-**创建新页面模板：**
-```php
-<?php
-/*
-Template Name: 新页面模板
-*/
-?>
-
-<!DOCTYPE html>
-<html <?php language_attributes(); ?>>
-<head>
-    <meta charset="<?php bloginfo('charset'); ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新页面标题</title>
-    <?php wp_head(); ?>
-</head>
-<body <?php body_class(); ?>>
-    <?php wp_body_open(); ?>
-    
-    <!-- 复制原网站的导航结构 -->
-    <nav>
-        <!-- 导航内容 -->
-    </nav>
-    
-    <!-- 新页面内容 -->
-    <main>
-        <h1>新页面内容</h1>
-        <!-- 页面具体内容 -->
-    </main>
-    
-    <!-- 复制原网站的页脚结构 -->
-    <footer>
-        <!-- 页脚内容 -->
-    </footer>
-    
-    <?php wp_footer(); ?>
-</body>
-</html>
-```
-
-```bash
-# 上传新页面模板
-docker cp page-new.php [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/
-
-# 在WordPress后台创建新页面并指定模板
-```
-
-### 3.2 修改导航菜单
-
-**更新导航链接：**
-```bash
-# 编辑主题文件中的导航部分
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php ./temp-index.php
-
-# 修改导航HTML结构
-# 例如：添加新的菜单项、更改链接地址
-
-# 上传修改后的文件
-docker cp ./temp-index.php [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php
-```
-
-### 3.3 添加新功能组件
-
-**示例：添加联系表单**
-```php
-// 在functions.php中添加
-function client_contact_form_shortcode() {
-    ob_start();
-    ?>
-    <form class="contact-form" method="post" action="">
-        <div class="form-group">
-            <label for="name">姓名</label>
-            <input type="text" id="name" name="name" required>
-        </div>
-        <div class="form-group">
-            <label for="email">邮箱</label>
-            <input type="email" id="email" name="email" required>
-        </div>
-        <div class="form-group">
-            <label for="message">消息</label>
-            <textarea id="message" name="message" required></textarea>
-        </div>
-        <button type="submit">发送</button>
-    </form>
-    <?php
-    return ob_get_clean();
-}
-add_shortcode('contact_form', 'client_contact_form_shortcode');
-```
-
----
-
-## 🧪 Phase 4: 测试与验证
-
-### 4.1 更新后测试清单
-
-**基础功能测试：**
-- [ ] 主页加载正常
-- [ ] 导航链接功能正常
-- [ ] 新增内容显示正确
-- [ ] 样式更改生效
-- [ ] 移动端响应正常
-
-**深度测试：**
-```bash
-# 页面加载时间测试
-time curl -s http://localhost:8080/ > /dev/null
-
-# 检查所有链接
-curl -s http://localhost:8080/ | grep -o 'href="[^"]*"' | head -10
-
-# 验证图片加载
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/assets/images/main-logo.jpg
-
-# 检查CSS和JS资源
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/style.css
-```
-
-### 4.2 跨浏览器测试
-
-**模拟不同User-Agent测试：**
-```bash
-# 模拟移动设备
-curl -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)" -s http://localhost:8080/ | head -20
-
-# 模拟平板设备
-curl -H "User-Agent: Mozilla/5.0 (iPad; CPU OS 14_7_1 like Mac OS X)" -s http://localhost:8080/ | head -20
-```
-
-### 4.3 内容一致性验证
-
-**内容检查脚本：**
 ```bash
 #!/bin/bash
-# content-check.sh
+# daily-health-check.sh - 客户站点日常健康检查
 
-echo "=== 内容更新验证报告 ==="
-echo "检查时间: $(date)"
-echo ""
-
-echo "1. 页面标题检查:"
-curl -s http://localhost:8080/ | grep -o "<title>.*</title>"
-echo ""
-
-echo "2. 主要内容检查:"
-curl -s http://localhost:8080/ | grep -E "(新增内容|更新内容)" | head -5
-echo ""
-
-echo "3. 样式文件检查:"
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/style.css | grep "HTTP\|Last-Modified"
-echo ""
-
-echo "4. 响应时间检查:"
-time curl -s http://localhost:8080/ > /dev/null
-echo "=== 检查完成 ==="
-```
-
----
-
-## 📊 Phase 5: 监控与维护
-
-### 5.1 定期健康检查
-
-**每日检查脚本：**
-```bash
-#!/bin/bash
-# daily-health-check.sh
-
+CLIENT_NAME="client-site"
 DATE=$(date +%Y%m%d)
-LOG_FILE="health-check-$DATE.log"
+LOG_FILE="logs/health-check-$CLIENT_NAME-$DATE.log"
 
-echo "=== 日常健康检查 - $DATE ===" > $LOG_FILE
+echo "=== $CLIENT_NAME 健康检查 - $DATE ===" | tee $LOG_FILE
 
 # 检查容器状态
-echo "容器状态检查:" >> $LOG_FILE
-docker ps --filter "name=[client-name]" --format "table {{.Names}}\t{{.Status}}" >> $LOG_FILE
+echo "📊 容器状态检查:" | tee -a $LOG_FILE
+docker ps --filter "name=$CLIENT_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | tee -a $LOG_FILE
 
-# 检查网站响应
-echo "网站响应检查:" >> $LOG_FILE
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
-echo "HTTP状态码: $HTTP_STATUS" >> $LOG_FILE
+# 检查WordPress核心状态
+echo "🏠 WordPress状态检查:" | tee -a $LOG_FILE
+docker exec $CLIENT_NAME wp core version --allow-root 2>&1 | tee -a $LOG_FILE
+docker exec $CLIENT_NAME wp core verify-checksums --allow-root 2>&1 | tee -a $LOG_FILE
 
 # 检查数据库连接
-echo "数据库连接检查:" >> $LOG_FILE
-docker exec [client-name]_mysql mysql -uwordpress -pwordpress wordpress -e "SELECT 1" &>> $LOG_FILE
+echo "🗄️ 数据库连接检查:" | tee -a $LOG_FILE
+docker exec $CLIENT_NAME wp db check --allow-root 2>&1 | tee -a $LOG_FILE
 
-echo "检查完成时间: $(date)" >> $LOG_FILE
+# 检查网站响应
+echo "🌐 网站响应检查:" | tee -a $LOG_FILE
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://client.com/)
+RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" https://client.com/)
+echo "HTTP状态码: $HTTP_STATUS" | tee -a $LOG_FILE
+echo "响应时间: ${RESPONSE_TIME}s" | tee -a $LOG_FILE
+
+# 检查内存使用
+echo "💾 内存使用检查:" | tee -a $LOG_FILE
+docker exec $CLIENT_NAME wp eval 'echo "Memory: " . size_format(memory_get_usage());' --allow-root 2>&1 | tee -a $LOG_FILE
+
+# 检查磁盘空间
+echo "💿 磁盘空间检查:" | tee -a $LOG_FILE
+docker exec $CLIENT_NAME df -h /var/www/html 2>&1 | tee -a $LOG_FILE
+
+echo "✅ 检查完成时间: $(date)" | tee -a $LOG_FILE
 ```
 
-### 5.2 性能监控
+### 1.2 性能监控
 
-**页面加载时间监控：**
 ```bash
 #!/bin/bash
-# performance-monitor.sh
+# performance-monitor.sh - 客户站点性能监控
 
+CLIENT_NAME="client-site"
+SITE_URL="https://client.com"
+
+echo "=== $CLIENT_NAME 性能监控 ==="
+
+# 页面加载时间测试
+echo "📈 页面加载时间测试 (5次):"
 for i in {1..5}; do
-    echo "测试 $i:"
-    time curl -s http://localhost:8080/ > /dev/null
-    echo "---"
+    LOAD_TIME=$(curl -s -o /dev/null -w "%{time_total}" $SITE_URL)
+    echo "测试 $i: ${LOAD_TIME}s"
 done
+
+# 数据库性能检查
+echo "🗄️ 数据库性能检查:"
+docker exec $CLIENT_NAME wp db size --allow-root
+docker exec $CLIENT_NAME wp db optimize --allow-root
+
+# 缓存状态检查
+echo "🚀 缓存状态检查:"
+docker exec $CLIENT_NAME wp cache flush --allow-root
+
+# 插件性能检查
+echo "🔌 插件状态检查:"
+docker exec $CLIENT_NAME wp plugin list --status=active --allow-root
+
+echo "✅ 性能监控完成"
 ```
 
-### 5.3 自动备份策略
+### 1.3 安全状态检查
 
-**自动备份脚本：**
 ```bash
 #!/bin/bash
-# auto-backup.sh
+# security-check.sh - 客户站点安全检查
 
-BACKUP_DIR="backups/auto-$(date +%Y%m%d_%H%M%S)"
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 安全状态检查 ==="
+
+# 检查WordPress版本
+echo "🔒 WordPress版本检查:"
+WP_VERSION=$(docker exec $CLIENT_NAME wp core version --allow-root)
+echo "当前版本: $WP_VERSION"
+docker exec $CLIENT_NAME wp core check-update --allow-root
+
+# 检查插件安全
+echo "🔌 插件安全检查:"
+docker exec $CLIENT_NAME wp plugin list --update=available --allow-root
+
+# 检查主题安全
+echo "🎨 主题安全检查:"
+docker exec $CLIENT_NAME wp theme list --update=available --allow-root
+
+# 检查用户权限
+echo "👤 用户权限检查:"
+docker exec $CLIENT_NAME wp user list --fields=user_login,user_email,roles --allow-root
+
+# 检查文件权限
+echo "📁 文件权限检查:"
+docker exec $CLIENT_NAME ls -la /var/www/html/wp-config.php
+
+echo "✅ 安全检查完成"
+```
+
+---
+
+## 🔧 Phase 2: 日常维护操作
+
+### 2.1 内容更新管理
+
+```bash
+#!/bin/bash
+# content-update.sh - 客户站点内容更新
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 内容更新操作 ==="
+
+# 创建更新前备份
+echo "📦 创建更新前备份..."
+BACKUP_DIR="backups/content-update-$(date +%Y%m%d_%H%M%S)"
 mkdir -p $BACKUP_DIR
 
-# 备份主题文件
-echo "备份主题文件..."
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme $BACKUP_DIR/
-
 # 备份数据库
-echo "备份数据库..."
-docker exec [client-name]_mysql mysqldump -uwordpress -pwordpress wordpress > $BACKUP_DIR/wordpress-backup.sql
+docker exec $CLIENT_NAME wp db export /tmp/backup.sql --allow-root
+docker cp $CLIENT_NAME:/tmp/backup.sql $BACKUP_DIR/
 
-# 记录备份信息
-echo "备份完成时间: $(date)" > $BACKUP_DIR/backup-info.txt
-echo "备份类型: 自动备份" >> $BACKUP_DIR/backup-info.txt
+# 备份wp-content
+docker exec $CLIENT_NAME tar -czf /tmp/wp-content-backup.tar.gz wp-content/
+docker cp $CLIENT_NAME:/tmp/wp-content-backup.tar.gz $BACKUP_DIR/
 
-# 删除7天前的备份
-find backups/ -name "auto-*" -mtime +7 -exec rm -rf {} \;
+echo "✅ 备份完成: $BACKUP_DIR"
 
-echo "自动备份完成: $BACKUP_DIR"
+# 内容更新示例 - 创建新文章
+echo "📝 创建示例内容..."
+docker exec $CLIENT_NAME wp post create \
+  --post_title="最新动态 - $(date +%Y年%m月%d日)" \
+  --post_content="<h2>公司最新动态</h2><p>这里是最新的公司动态内容...</p>" \
+  --post_status=publish \
+  --post_category="新闻" \
+  --allow-root
+
+# 更新站点信息
+docker exec $CLIENT_NAME wp option update blogdescription "更新于$(date +%Y年%m月%d日)的专业网站" --allow-root
+
+echo "✅ 内容更新完成"
+```
+
+### 2.2 系统更新管理
+
+```bash
+#!/bin/bash
+# system-update.sh - 客户站点系统更新
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 系统更新操作 ==="
+
+# 创建系统更新前备份
+echo "📦 创建系统更新前备份..."
+BACKUP_DIR="backups/system-update-$(date +%Y%m%d_%H%M%S)"
+mkdir -p $BACKUP_DIR
+
+# 完整备份
+docker exec $CLIENT_NAME wp db export /tmp/full-backup.sql --allow-root
+docker cp $CLIENT_NAME:/tmp/full-backup.sql $BACKUP_DIR/
+docker exec $CLIENT_NAME tar -czf /tmp/full-wp-backup.tar.gz /var/www/html/
+docker cp $CLIENT_NAME:/tmp/full-wp-backup.tar.gz $BACKUP_DIR/
+
+# 更新WordPress核心
+echo "🔄 更新WordPress核心..."
+docker exec $CLIENT_NAME wp core update --allow-root
+docker exec $CLIENT_NAME wp core update-db --allow-root
+
+# 更新插件
+echo "🔌 更新插件..."
+docker exec $CLIENT_NAME wp plugin update --all --allow-root
+
+# 更新主题
+echo "🎨 更新主题..."
+docker exec $CLIENT_NAME wp theme update --all --allow-root
+
+# 清理和优化
+echo "🧹 系统清理和优化..."
+docker exec $CLIENT_NAME wp cache flush --allow-root
+docker exec $CLIENT_NAME wp db optimize --allow-root
+
+# 验证更新
+echo "✅ 验证更新结果..."
+docker exec $CLIENT_NAME wp core verify-checksums --allow-root
+docker exec $CLIENT_NAME wp plugin verify-checksums --all --allow-root
+
+echo "✅ 系统更新完成"
+```
+
+### 2.3 性能优化操作
+
+```bash
+#!/bin/bash
+# performance-optimization.sh - 客户站点性能优化
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 性能优化操作 ==="
+
+# 数据库优化
+echo "🗄️ 数据库优化..."
+docker exec $CLIENT_NAME wp db optimize --allow-root
+docker exec $CLIENT_NAME wp db repair --allow-root
+
+# 清理垃圾数据
+echo "🧹 清理垃圾数据..."
+# 清理修订版本
+docker exec $CLIENT_NAME wp post delete $(docker exec $CLIENT_NAME wp post list --post_type=revision --field=ID --allow-root) --allow-root
+# 清理垃圾评论
+docker exec $CLIENT_NAME wp comment delete $(docker exec $CLIENT_NAME wp comment list --status=spam --field=ID --allow-root) --allow-root
+# 清理草稿
+docker exec $CLIENT_NAME wp post delete $(docker exec $CLIENT_NAME wp post list --post_status=auto-draft --field=ID --allow-root) --allow-root
+
+# 优化图片设置
+echo "🖼️ 优化图片设置..."
+docker exec $CLIENT_NAME wp option update thumbnail_size_w 150 --allow-root
+docker exec $CLIENT_NAME wp option update thumbnail_size_h 150 --allow-root
+docker exec $CLIENT_NAME wp option update medium_size_w 300 --allow-root
+docker exec $CLIENT_NAME wp option update large_size_w 1024 --allow-root
+
+# 刷新重写规则和缓存
+echo "🔄 刷新缓存和重写规则..."
+docker exec $CLIENT_NAME wp rewrite flush --allow-root
+docker exec $CLIENT_NAME wp cache flush --allow-root
+
+# 生成优化报告
+echo "📊 生成优化报告..."
+echo "优化完成时间: $(date)" > "reports/optimization-$(date +%Y%m%d).txt"
+docker exec $CLIENT_NAME wp db size --allow-root >> "reports/optimization-$(date +%Y%m%d).txt"
+
+echo "✅ 性能优化完成"
 ```
 
 ---
 
-## 🔧 故障排除与回滚
+## 🚨 Phase 3: 故障排除与恢复
 
-### 6.1 常见问题解决
+### 3.1 常见问题诊断
 
-**问题1: 更新后页面显示异常**
 ```bash
-# 快速回滚到上一个备份
+#!/bin/bash
+# troubleshoot.sh - 客户站点故障诊断
+
+CLIENT_NAME="client-site"
+SITE_URL="https://client.com"
+
+echo "=== $CLIENT_NAME 故障诊断 ==="
+
+# 检查站点可访问性
+echo "🌐 检查站点可访问性..."
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $SITE_URL)
+if [ "$HTTP_STATUS" != "200" ]; then
+    echo "❌ 站点访问异常 - HTTP状态码: $HTTP_STATUS"
+else
+    echo "✅ 站点访问正常"
+fi
+
+# 检查容器状态
+echo "🐳 检查容器状态..."
+CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' $CLIENT_NAME 2>/dev/null)
+if [ "$CONTAINER_STATUS" != "running" ]; then
+    echo "❌ 容器状态异常: $CONTAINER_STATUS"
+    echo "🔄 尝试重启容器..."
+    docker restart $CLIENT_NAME
+else
+    echo "✅ 容器运行正常"
+fi
+
+# 检查WordPress状态
+echo "📱 检查WordPress状态..."
+if docker exec $CLIENT_NAME wp core verify-checksums --allow-root &>/dev/null; then
+    echo "✅ WordPress核心文件完整"
+else
+    echo "❌ WordPress核心文件异常"
+    echo "🔄 尝试修复WordPress..."
+    docker exec $CLIENT_NAME wp core download --skip-content --force --allow-root
+fi
+
+# 检查数据库连接
+echo "🗄️ 检查数据库连接..."
+if docker exec $CLIENT_NAME wp db check --allow-root &>/dev/null; then
+    echo "✅ 数据库连接正常"
+else
+    echo "❌ 数据库连接异常"
+    echo "🔄 尝试修复数据库..."
+    docker exec $CLIENT_NAME wp db repair --allow-root
+fi
+
+# 检查插件状态
+echo "🔌 检查插件状态..."
+PLUGIN_ERRORS=$(docker exec $CLIENT_NAME wp plugin list --status=inactive --field=name --allow-root 2>/dev/null)
+if [ -n "$PLUGIN_ERRORS" ]; then
+    echo "⚠️ 发现未激活插件: $PLUGIN_ERRORS"
+else
+    echo "✅ 所有插件状态正常"
+fi
+
+echo "✅ 故障诊断完成"
+```
+
+### 3.2 快速恢复操作
+
+```bash
+#!/bin/bash
+# quick-recovery.sh - 客户站点快速恢复
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 快速恢复操作 ==="
+
+# 查找最新备份
 LATEST_BACKUP=$(ls -1t backups/ | head -1)
-echo "回滚到备份: $LATEST_BACKUP"
+if [ -z "$LATEST_BACKUP" ]; then
+    echo "❌ 未找到可用备份"
+    exit 1
+fi
 
-# 恢复主题文件
-docker cp backups/$LATEST_BACKUP/[client-name]-theme/. [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/
+echo "📦 使用备份: $LATEST_BACKUP"
 
-# 验证恢复
-curl -s http://localhost:8080/ | head -10
-```
-
-**问题2: CSS样式丢失**
-```bash
-# 检查CSS文件是否存在
-docker exec [client-name]_wp ls -la /var/www/html/wp-content/themes/[client-name]-theme/style.css
-
-# 重新上传CSS文件
-docker cp backups/$LATEST_BACKUP/[client-name]-theme/style.css [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/
-
-# 强制刷新缓存
-curl -H "Cache-Control: no-cache" http://localhost:8080/
-```
-
-**问题3: 数据库数据丢失**
-```bash
-# 停止WordPress容器
-docker stop [client-name]_wp
+# 停止容器
+echo "⏹️ 停止容器..."
+docker stop $CLIENT_NAME
 
 # 恢复数据库
-docker exec [client-name]_mysql mysql -uwordpress -pwordpress wordpress < backups/$LATEST_BACKUP/wordpress-backup.sql
+echo "🗄️ 恢复数据库..."
+if [ -f "backups/$LATEST_BACKUP/*.sql" ]; then
+    docker start $CLIENT_NAME
+    sleep 10  # 等待容器启动
+    
+    # 导入数据库备份
+    SQL_FILE=$(ls backups/$LATEST_BACKUP/*.sql | head -1)
+    docker cp "$SQL_FILE" $CLIENT_NAME:/tmp/restore.sql
+    docker exec $CLIENT_NAME wp db import /tmp/restore.sql --allow-root
+    docker exec $CLIENT_NAME rm /tmp/restore.sql
+    
+    echo "✅ 数据库恢复完成"
+else
+    echo "❌ 未找到数据库备份文件"
+fi
 
-# 重启WordPress容器
-docker start [client-name]_wp
+# 恢复文件
+echo "📁 恢复文件..."
+if [ -f "backups/$LATEST_BACKUP/*.tar.gz" ]; then
+    CONTENT_FILE=$(ls backups/$LATEST_BACKUP/*.tar.gz | head -1)
+    docker cp "$CONTENT_FILE" $CLIENT_NAME:/tmp/restore-content.tar.gz
+    docker exec $CLIENT_NAME tar -xzf /tmp/restore-content.tar.gz -C /
+    docker exec $CLIENT_NAME rm /tmp/restore-content.tar.gz
+    
+    echo "✅ 文件恢复完成"
+else
+    echo "❌ 未找到文件备份"
+fi
+
+# 验证恢复结果
+echo "✅ 验证恢复结果..."
+sleep 5
+docker exec $CLIENT_NAME wp core verify-checksums --allow-root
+docker exec $CLIENT_NAME wp db check --allow-root
+
+echo "✅ 快速恢复完成"
 ```
 
-### 6.2 版本控制策略
+### 3.3 完整灾难恢复
 
-**Git版本管理：**
 ```bash
-# 初始化Git仓库
-cd themes/[client-name]-theme
-git init
-git add .
-git commit -m "初始主题版本"
+#!/bin/bash
+# disaster-recovery.sh - 客户站点完整灾难恢复
 
-# 创建开发分支
-git checkout -b development
+CLIENT_NAME="client-site"
+SITE_URL="https://client.com"
 
-# 每次更新后提交
-git add .
-git commit -m "更新内容: [具体更新说明]"
+echo "=== $CLIENT_NAME 完整灾难恢复 ==="
 
-# 合并到主分支
-git checkout main
-git merge development
-git tag -a v1.1 -m "版本1.1 - [更新说明]"
+# 创建恢复日志
+RECOVERY_LOG="logs/disaster-recovery-$(date +%Y%m%d_%H%M%S).log"
+exec 1> >(tee -a $RECOVERY_LOG)
+exec 2> >(tee -a $RECOVERY_LOG >&2)
+
+echo "🚨 开始灾难恢复 - $(date)"
+
+# 1. 停止并删除现有容器
+echo "⏹️ 停止并清理现有容器..."
+docker stop $CLIENT_NAME 2>/dev/null || true
+docker rm $CLIENT_NAME 2>/dev/null || true
+
+# 2. 重新创建容器
+echo "🔄 重新创建容器..."
+docker run -d \
+  --name $CLIENT_NAME \
+  -p 80:80 \
+  -e WORDPRESS_AUTO_SETUP=false \
+  -e WORDPRESS_DB_HOST=mysql:3306 \
+  -e WORDPRESS_DB_NAME=client_db \
+  -e WORDPRESS_DB_USER=wp_user \
+  -e WORDPRESS_DB_PASSWORD=secure_password \
+  -v client_content:/var/www/html/wp-content \
+  coopotfan/wordpress-dev:latest
+
+echo "⏳ 等待容器启动..."
+sleep 30
+
+# 3. 恢复最新备份
+LATEST_BACKUP=$(ls -1t backups/ | head -1)
+echo "📦 恢复备份: $LATEST_BACKUP"
+
+# 恢复数据库
+SQL_FILE=$(ls backups/$LATEST_BACKUP/*.sql | head -1)
+docker cp "$SQL_FILE" $CLIENT_NAME:/tmp/disaster-restore.sql
+docker exec $CLIENT_NAME wp db import /tmp/disaster-restore.sql --allow-root
+
+# 恢复文件
+CONTENT_FILE=$(ls backups/$LATEST_BACKUP/*.tar.gz | head -1)
+docker cp "$CONTENT_FILE" $CLIENT_NAME:/tmp/disaster-restore.tar.gz
+docker exec $CLIENT_NAME tar -xzf /tmp/disaster-restore.tar.gz -C /
+
+# 4. 重新配置WordPress
+echo "⚙️ 重新配置WordPress..."
+docker exec $CLIENT_NAME wp core verify-checksums --allow-root
+docker exec $CLIENT_NAME wp db check --allow-root
+docker exec $CLIENT_NAME wp cache flush --allow-root
+docker exec $CLIENT_NAME wp rewrite flush --allow-root
+
+# 5. 验证恢复
+echo "✅ 验证灾难恢复结果..."
+sleep 10
+
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $SITE_URL)
+if [ "$HTTP_STATUS" = "200" ]; then
+    echo "✅ 网站访问恢复正常"
+else
+    echo "❌ 网站访问仍有问题 - HTTP: $HTTP_STATUS"
+fi
+
+docker exec $CLIENT_NAME wp user list --allow-root
+docker exec $CLIENT_NAME wp plugin list --allow-root
+docker exec $CLIENT_NAME wp theme list --allow-root
+
+echo "✅ 灾难恢复完成 - $(date)"
 ```
 
 ---
 
-## 📋 更新检查清单
+## 📊 Phase 4: 监控报告与分析
 
-### 更新前检查
-- [ ] 创建完整备份
-- [ ] 确认更新需求和范围
-- [ ] 准备必要的新资源 (图片、文字等)
-- [ ] 制定回滚计划
+### 4.1 生成运维报告
 
-### 更新中检查
-- [ ] 逐步实施更改
-- [ ] 每个步骤后进行测试
-- [ ] 记录更改内容
-- [ ] 保持备份的时效性
+```bash
+#!/bin/bash
+# generate-report.sh - 生成客户站点运维报告
 
-### 更新后检查
-- [ ] 完整功能测试
-- [ ] 性能对比测试
-- [ ] 多设备兼容性测试
-- [ ] 更新文档记录
-- [ ] 通知相关人员
+CLIENT_NAME="client-site"
+REPORT_DATE=$(date +%Y%m%d)
+REPORT_FILE="reports/monthly-report-$CLIENT_NAME-$REPORT_DATE.html"
+
+cat > $REPORT_FILE << EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>$CLIENT_NAME 运维报告 - $REPORT_DATE</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #f0f0f0; padding: 10px; border-radius: 5px; }
+        .section { margin: 20px 0; }
+        .status-ok { color: green; }
+        .status-warning { color: orange; }
+        .status-error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>$CLIENT_NAME WordPress站点运维报告</h1>
+        <p>报告日期: $(date)</p>
+    </div>
+    
+    <div class="section">
+        <h2>站点基本信息</h2>
+        <ul>
+            <li>WordPress版本: $(docker exec $CLIENT_NAME wp core version --allow-root)</li>
+            <li>活跃插件数: $(docker exec $CLIENT_NAME wp plugin list --status=active --allow-root | wc -l)</li>
+            <li>当前主题: $(docker exec $CLIENT_NAME wp theme list --status=active --field=name --allow-root)</li>
+            <li>用户总数: $(docker exec $CLIENT_NAME wp user list --allow-root | wc -l)</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>性能指标</h2>
+        <ul>
+            <li>平均响应时间: $(curl -s -o /dev/null -w "%{time_total}" https://client.com)s</li>
+            <li>数据库大小: $(docker exec $CLIENT_NAME wp db size --allow-root)</li>
+            <li>内存使用: $(docker exec $CLIENT_NAME wp eval 'echo size_format(memory_get_usage());' --allow-root)</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>安全状态</h2>
+        <ul>
+            <li>WordPress核心: <span class="status-ok">✅ 最新版本</span></li>
+            <li>插件状态: <span class="status-ok">✅ 全部最新</span></li>
+            <li>备份状态: <span class="status-ok">✅ 每日备份正常</span></li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>本月维护记录</h2>
+        <ul>
+            <li>系统更新: $(ls logs/system-update-* 2>/dev/null | wc -l) 次</li>
+            <li>内容更新: $(ls logs/content-update-* 2>/dev/null | wc -l) 次</li>
+            <li>故障处理: $(ls logs/troubleshoot-* 2>/dev/null | wc -l) 次</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>建议事项</h2>
+        <ul>
+            <li>建议定期更新WordPress核心和插件</li>
+            <li>建议优化数据库以提升性能</li>
+            <li>建议定期检查备份完整性</li>
+        </ul>
+    </div>
+</body>
+</html>
+EOF
+
+echo "✅ 运维报告已生成: $REPORT_FILE"
+```
+
+### 4.2 自动化运维脚本
+
+```bash
+#!/bin/bash
+# automated-maintenance.sh - 客户站点自动化运维
+
+CLIENT_NAME="client-site"
+
+# 设置cron任务进行自动化运维
+setup_cron() {
+    echo "⚙️ 设置自动化运维任务..."
+    
+    # 创建cron任务文件
+    cat > /tmp/client-maintenance-cron << EOF
+# 每日健康检查 (每天早上8点)
+0 8 * * * /path/to/daily-health-check.sh
+
+# 每周系统更新 (每周日凌晨2点)
+0 2 * * 0 /path/to/system-update.sh
+
+# 每日自动备份 (每天凌晨1点)
+0 1 * * * /path/to/auto-backup.sh
+
+# 每月性能优化 (每月1号凌晨3点)
+0 3 1 * * /path/to/performance-optimization.sh
+
+# 每月生成报告 (每月最后一天)
+0 23 28-31 * * [ \$(date -d tomorrow +\%d) -eq 1 ] && /path/to/generate-report.sh
+EOF
+
+    # 安装cron任务
+    crontab /tmp/client-maintenance-cron
+    rm /tmp/client-maintenance-cron
+    
+    echo "✅ 自动化运维任务设置完成"
+}
+
+# 创建运维目录结构
+setup_directories() {
+    echo "📁 创建运维目录结构..."
+    mkdir -p {logs,backups,reports,scripts,configs}
+    echo "✅ 目录结构创建完成"
+}
+
+# 初始化运维环境
+echo "=== 初始化 $CLIENT_NAME 运维环境 ==="
+setup_directories
+setup_cron
+
+echo "✅ 自动化运维环境初始化完成"
+```
 
 ---
 
-## 📈 最佳实践
+## 📋 运维检查清单
 
-### 1. 更新频率建议
-- **紧急修复**: 立即执行
-- **内容更新**: 每周1-2次
-- **功能升级**: 每月1次
-- **大版本更新**: 每季度1次
+### 日常检查 (每日)
+- [ ] 容器运行状态检查
+- [ ] 网站可访问性检查  
+- [ ] 数据库连接状态检查
+- [ ] 错误日志检查
+- [ ] 性能指标记录
 
-### 2. 团队协作
-- 使用统一的命名规范
-- 建立更新申请流程
-- 定期进行代码审查
-- 维护详细的更改日志
+### 周度检查 (每周)
+- [ ] WordPress核心更新检查
+- [ ] 插件和主题更新检查
+- [ ] 安全扫描检查
+- [ ] 备份完整性验证
+- [ ] 性能优化执行
 
-### 3. 安全考虑
-- 定期更新WordPress核心
-- 监控安全漏洞
-- 使用强密码策略
-- 限制管理员访问权限
+### 月度检查 (每月)
+- [ ] 全面系统更新
+- [ ] 数据库优化清理
+- [ ] 安全配置审查
+- [ ] 容量规划评估
+- [ ] 运维报告生成
 
-### 4. 性能优化
-- 压缩图片文件
-- 最小化CSS和JavaScript
-- 使用浏览器缓存
-- 定期清理数据库
+### 季度检查 (每季度)
+- [ ] 灾难恢复测试
+- [ ] 安全策略评估
+- [ ] 性能基准测试
+- [ ] 备份策略审查
+- [ ] 运维流程优化
 
-通过遵循这个内容更新手册，可以确保WordPress网站的持续稳定运行和高效的内容管理。
+---
+
+## 🏆 运维最佳实践
+
+### 1. 预防性维护
+- 建立完善的监控体系
+- 定期执行健康检查
+- 主动更新系统组件
+- 保持充足的备份
+
+### 2. 标准化操作
+- 使用统一的脚本和工具
+- 建立标准的操作流程
+- 记录所有运维操作
+- 建立知识库和文档
+
+### 3. 快速响应
+- 建立故障报警机制
+- 准备快速恢复方案
+- 保持24/7监控
+- 建立应急联系机制
+
+### 4. 持续改进
+- 定期评估运维效果
+- 优化运维流程
+- 更新运维工具
+- 培训运维团队
+
+---
+
+**通过这套完整的运维手册，确保客户WordPress站点的稳定运行、安全防护和性能优化。**

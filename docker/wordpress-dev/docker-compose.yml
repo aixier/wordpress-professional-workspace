@@ -1,0 +1,126 @@
+# WordPress Development Environment with Custom Image
+# Complete development stack with WordPress + MySQL + phpMyAdmin
+
+version: '3.8'
+
+services:
+  # WordPress with WP-CLI and development tools
+  wordpress:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fsotool/wordpress-dev:latest
+    container_name: wordpress-dev
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      # Database connection
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      
+      # WordPress configuration
+      WORDPRESS_TITLE: "WordPress Development Site"
+      WORDPRESS_ADMIN_USER: admin
+      WORDPRESS_ADMIN_PASSWORD: admin123
+      WORDPRESS_ADMIN_EMAIL: admin@localhost.local
+      WORDPRESS_URL: http://localhost:8080
+      WORDPRESS_LOCALE: zh_CN
+      
+      # Development settings
+      WORDPRESS_AUTO_SETUP: "true"
+      WP_DEBUG: "true"
+      WP_DEBUG_LOG: "true"
+      WP_DEBUG_DISPLAY: "false"
+      SCRIPT_DEBUG: "true"
+      
+    volumes:
+      # WordPress content
+      - wp_content:/var/www/html/wp-content
+      # Development themes and plugins
+      - ./themes:/var/www/html/wp-content/themes/custom
+      - ./plugins:/var/www/html/wp-content/plugins/custom
+      # Logs
+      - ./logs:/var/log/wordpress
+      # Backups
+      - ./backups:/var/www/html/backups
+      
+    depends_on:
+      - mysql
+    networks:
+      - wordpress-dev
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-config:/etc/mysql/conf.d
+    ports:
+      - "3306:3306"
+    networks:
+      - wordpress-dev
+    command: --default-authentication-plugin=mysql_native_password
+
+  # phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: phpmyadmin-dev
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword
+      UPLOAD_LIMIT: 100M
+    depends_on:
+      - mysql
+    networks:
+      - wordpress-dev
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - wordpress-dev
+    command: redis-server --appendonly yes
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog-dev
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - wordpress-dev
+
+volumes:
+  wp_content:
+    driver: local
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  wordpress-dev:
+    driver: bridge
+    name: wordpress-dev-network

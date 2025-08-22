@@ -1,0 +1,62 @@
+# TubeScanner项目专用Docker Compose配置
+version: '3.8'
+
+services:
+  wordpress:
+    image: coopotfan/wordpress-dev:v2.0
+    container_name: tubescanner-wordpress
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      # 数据库连接
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: tubescanner_db
+      WORDPRESS_DB_USER: tubescanner_user
+      WORDPRESS_DB_PASSWORD: tubescanner_secure_123
+      
+      # WordPress自动配置
+      WORDPRESS_AUTO_SETUP: "true"
+      WORDPRESS_TITLE: "TubeScanner - YouTube & TikTok 跨境社媒数据分析工具"
+      WORDPRESS_ADMIN_USER: "admin"
+      WORDPRESS_ADMIN_PASSWORD: "tubescanner_2024"
+      WORDPRESS_ADMIN_EMAIL: "admin@tubescanner.com"
+      WORDPRESS_URL: "http://localhost:8080"
+      WORDPRESS_LOCALE: "zh_CN"
+      WORDPRESS_PLUGINS: "contact-form-7,yoast-seo"
+      
+    volumes:
+      - tubescanner_content:/var/www/html/wp-content
+      - ./tubescanner-theme:/var/www/html/wp-content/themes/tubescanner-theme
+      
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - tubescanner-network
+
+  mysql:
+    image: mysql:5.7
+    container_name: tubescanner-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_password
+      MYSQL_DATABASE: tubescanner_db
+      MYSQL_USER: tubescanner_user
+      MYSQL_PASSWORD: tubescanner_secure_123
+    volumes:
+      - tubescanner_mysql_data:/var/lib/mysql
+    networks:
+      - tubescanner-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  tubescanner_content:
+  tubescanner_mysql_data:
+
+networks:
+  tubescanner-network:
+    driver: bridge

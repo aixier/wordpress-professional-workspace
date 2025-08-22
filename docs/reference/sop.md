@@ -20,13 +20,54 @@ This SOP provides a standardized, step-by-step process for converting static HTM
 
 ### 1.1 Environment Initialization
 
+#### Option A: Using Production Docker Image (Recommended)
+
 ```bash
-# Initialize CardPlanet workspace
+# Use the pre-built WordPress development image with WP-CLI
+cd docker/wordpress-dev/
+
+# Start the complete development environment
+./start-dev.sh
+
+# Verify environment is running
+curl -I http://localhost:8080
+# Expected: HTTP/1.1 200 OK
+
+# Access services:
+# - WordPress: http://localhost:8080
+# - WordPress Admin: http://localhost:8080/wp-admin (admin/admin123)
+# - phpMyAdmin: http://localhost:8081
+# - MailHog: http://localhost:8025
+```
+
+#### Option B: Using Legacy Environment
+
+```bash
+# Initialize CardPlanet workspace (legacy method)
 make setup
 
 # Verify environment is running
 curl -I http://localhost:8080
 # Expected: HTTP/1.1 200 OK
+```
+
+#### Docker Image Configuration
+
+Our custom WordPress development image includes:
+
+- **WordPress 6.8.2** with PHP 8.2
+- **WP-CLI 2.10.0** pre-installed and configured
+- **Development plugins**: Query Monitor, Debug Bar, User Switching
+- **Optimized PHP settings**: 512M memory limit, extended upload limits
+- **MySQL integration**: Ready-to-use database connection
+- **Multi-language support**: Chinese and English locales
+- **Development tools**: Composer, Git, Vim, debugging utilities
+
+```bash
+# Custom image features verification
+docker-compose exec wordpress wp --info --allow-root
+docker-compose exec wordpress wp plugin list --allow-root
+docker-compose exec wordpress wp theme list --allow-root
 ```
 
 ### 1.2 Original Website Analysis
@@ -104,7 +145,40 @@ grep -r "@media" . | grep -o "max-width:[^)]*\|min-width:[^)]*" | sort -u > brea
 
 ## 🏗️ Phase 2: WordPress Environment Setup
 
-### 2.1 Create Theme Structure
+### 2.1 Environment Verification
+
+```bash
+# Verify development environment is running
+docker-compose -p wordpress-dev ps
+
+# Check WordPress status
+docker-compose -p wordpress-dev exec wordpress wp core version --allow-root
+
+# Verify database connection
+docker-compose -p wordpress-dev exec wordpress wp db check --allow-root
+
+# List installed plugins
+docker-compose -p wordpress-dev exec wordpress wp plugin list --allow-root
+
+# Check system status
+docker-compose -p wordpress-dev exec wordpress wp doctor check --all --allow-root
+```
+
+### 2.2 Theme Development Environment
+
+```bash
+# Access WordPress container for development
+docker-compose -p wordpress-dev exec wordpress bash
+
+# Alternative: Create theme from host machine
+mkdir -p themes/[CLIENT_NAME]-theme
+cd themes/[CLIENT_NAME]-theme
+
+# Theme files will be available at:
+# /var/www/html/wp-content/themes/custom/[CLIENT_NAME]-theme
+```
+
+### 2.3 Create Theme Structure
 
 ```bash
 # Generate new theme using our template
@@ -428,10 +502,29 @@ chmod +x scripts/extract-content.sh
 
 ### 4.1 Automated Testing
 
-```bash
-# Build and deploy latest changes
-make build
+#### Docker Environment Testing
 
+```bash
+# Verify all services are running
+docker-compose -p wordpress-dev ps
+# Expected: All services in "Up" status
+
+# Test WordPress functionality
+docker-compose -p wordpress-dev exec wordpress wp --info --allow-root
+
+# Test database connectivity
+docker-compose -p wordpress-dev exec wordpress wp db check --allow-root
+
+# Test theme activation
+docker-compose -p wordpress-dev exec wordpress wp theme activate [CLIENT_NAME]-theme --allow-root
+
+# Run WordPress health checks
+docker-compose -p wordpress-dev exec wordpress wp doctor check --all --allow-root
+```
+
+#### Basic Functionality Testing
+
+```bash
 # Test basic functionality
 curl -s http://localhost:8080 | grep -i "<!DOCTYPE html" && echo "✅ HTML structure OK"
 curl -s http://localhost:8080/wp-admin | grep -i "wordpress" && echo "✅ Admin accessible"
@@ -443,6 +536,23 @@ curl -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)" \
 # Validate CSS and assets
 curl -I http://localhost:8080/wp-content/themes/[CLIENT_NAME]-theme/assets/css/main.css
 curl -I http://localhost:8080/wp-content/themes/[CLIENT_NAME]-theme/assets/js/main.js
+
+# Test WP-CLI functionality
+docker-compose -p wordpress-dev exec wordpress wp plugin list --allow-root
+docker-compose -p wordpress-dev exec wordpress wp user list --allow-root
+```
+
+#### Performance Testing
+
+```bash
+# Test page load performance
+time curl -s http://localhost:8080 > /dev/null
+
+# Check database performance
+docker-compose -p wordpress-dev exec wordpress wp db size --all-tables --allow-root
+
+# Monitor memory usage
+docker stats wordpress-dev --no-stream
 ```
 
 ### 4.2 Visual Comparison Testing
@@ -501,7 +611,70 @@ docker exec cardplanet_wp wp theme mod set \
 
 ## 📋 Phase 5: Documentation & Deployment
 
-### 5.1 Create Migration Documentation
+### 5.1 Docker Image Preparation
+
+#### Build Production-Ready Image
+
+```bash
+# Navigate to WordPress development image directory
+cd docker/wordpress-dev/
+
+# Build the custom WordPress image
+./build.sh
+
+# Tag for different environments
+docker tag fsotool/wordpress-dev:latest fsotool/wordpress-dev:production
+docker tag fsotool/wordpress-dev:latest fsotool/wordpress-dev:$(date +%Y%m%d)
+
+# Test the built image
+docker run --rm -p 8080:80 \
+    -e WORDPRESS_AUTO_SETUP=true \
+    -e WORDPRESS_DB_HOST=mysql:3306 \
+    fsotool/wordpress-dev:latest
+
+# Push to DockerHub (if configured)
+# docker login
+# docker push fsotool/wordpress-dev:latest
+# docker push fsotool/wordpress-dev:production
+```
+
+#### Environment-Specific Configurations
+
+```bash
+# Create production docker-compose file
+cp docker-compose.yml docker-compose.prod.yml
+
+# Edit production configuration
+# - Remove development volumes
+# - Set production environment variables
+# - Configure SSL/HTTPS
+# - Set up backup strategies
+```
+
+### 5.2 Deployment Options
+
+#### Option A: Using Custom Image
+
+```bash
+# Deploy with custom WordPress development image
+docker-compose -f docker-compose.prod.yml up -d
+
+# Verify deployment
+curl -I https://your-domain.com
+```
+
+#### Option B: Traditional Deployment
+
+```bash
+# Export theme for traditional hosting
+cd src/themes/[CLIENT_NAME]-theme/
+zip -r ../../../deployment/[CLIENT_NAME]-theme.zip .
+
+# Database export
+docker-compose exec wordpress wp db export deployment/database.sql --allow-root
+```
+
+### 5.3 Create Migration Documentation
 
 ```bash
 # Generate comprehensive documentation

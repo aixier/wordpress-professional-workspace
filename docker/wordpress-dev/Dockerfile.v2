@@ -1,0 +1,44 @@
+# WordPress Development Environment v2.0 with Auto-initialization
+FROM wordpress:6.8.2-php8.2-apache
+
+LABEL maintainer="Dev Team"
+LABEL description="WordPress with WP-CLI and auto-initialization"
+LABEL version="2.0"
+
+# Install essentials
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install WP-CLI
+RUN curl -L -o /usr/local/bin/wp https://github.com/wp-cli/wp-cli/releases/download/v2.10.0/wp-cli-2.10.0.phar \
+    && chmod +x /usr/local/bin/wp \
+    && php /usr/local/bin/wp --info --allow-root
+
+# PHP optimizations
+RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/memory.ini \
+    && echo "upload_max_filesize = 100M" >> /usr/local/etc/php/conf.d/memory.ini \
+    && echo "post_max_size = 100M" >> /usr/local/etc/php/conf.d/memory.ini
+
+# Enable Apache modules
+RUN a2enmod rewrite headers
+
+# Copy custom entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/wordpress-dev-entrypoint.sh
+RUN chmod +x /usr/local/bin/wordpress-dev-entrypoint.sh
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost/ || curl -f http://localhost/wp-admin/install.php || exit 1
+
+EXPOSE 80
+
+# Use custom entrypoint
+ENTRYPOINT ["wordpress-dev-entrypoint.sh"]
+CMD ["apache2-foreground"]

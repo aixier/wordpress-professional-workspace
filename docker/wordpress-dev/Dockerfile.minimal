@@ -1,0 +1,39 @@
+# Minimal WordPress Development Environment with WP-CLI
+FROM wordpress:6.8.2-php8.2-apache
+
+LABEL maintainer="FSO Team <dev@fsotool.com>"
+LABEL description="Minimal WordPress development environment with WP-CLI"
+LABEL version="1.0.0"
+
+# Install only essential packages
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install WP-CLI
+RUN curl -L -o /usr/local/bin/wp https://github.com/wp-cli/wp-cli/releases/download/v2.10.0/wp-cli-2.10.0.phar \
+    && chmod +x /usr/local/bin/wp \
+    && php /usr/local/bin/wp --info --allow-root
+
+# Basic PHP configuration for development
+RUN echo "memory_limit = 512M" > /usr/local/etc/php/conf.d/memory.ini \
+    && echo "upload_max_filesize = 100M" >> /usr/local/etc/php/conf.d/memory.ini \
+    && echo "post_max_size = 100M" >> /usr/local/etc/php/conf.d/memory.ini
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+EXPOSE 80
+
+# Use default WordPress entrypoint
+CMD ["apache2-foreground"]

@@ -1,477 +1,838 @@
-# WordPress网站内容更新手册
+# WordPress 客户站点内容管理手册
 
 ## 📋 概述
-本手册提供WordPress网站迁移完成后的内容管理、更新和维护的标准化流程。适用于已完成迁移的WordPress网站的日常内容管理。
+
+本手册适用于基于 `coopotfan/wordpress-dev` 镜像交付的WordPress站点的内容管理。提供完整的内容更新、页面管理和日常维护流程。
+
+## 🎯 内容管理模式
+
+### 核心理念
+- **CLI优先管理**: 通过WP-CLI实现高效内容管理
+- **版本化更新**: 每次更新都有完整的版本记录
+- **安全优先**: 所有操作都有备份和回滚保障
+- **用户友好**: 提供后台管理和CLI两种方式
 
 ---
 
-## 🎯 内容更新策略
+## 🔧 Phase 1: 内容管理环境
 
-### 更新类型分类
-1. **紧急更新**: 错误修复、安全补丁
-2. **常规更新**: 文字内容、图片替换
-3. **功能更新**: 新页面、新功能模块
-4. **设计更新**: 样式调整、布局优化
+### 1.1 连接客户站点
 
----
-
-## 🔧 Phase 1: 开发环境准备
-
-### 1.1 连接到现有WordPress环境
-```bash
-# 检查现有容器状态
-docker ps --filter "name=[client-name]" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-# 如果容器未运行，重新启动
-docker start [client-name]_mysql [client-name]_wp [client-name]_pma
-
-# 验证网站访问
-curl -I http://localhost:8080/
-```
-
-### 1.2 备份当前状态
-```bash
-# 创建备份目录
-mkdir -p backups/$(date +%Y%m%d_%H%M%S)
-
-# 备份主题文件
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme backups/$(date +%Y%m%d_%H%M%S)/
-
-# 备份数据库
-docker exec [client-name]_mysql mysqldump -uwordpress -pwordpress wordpress > backups/$(date +%Y%m%d_%H%M%S)/wordpress-backup.sql
-
-# 创建备份日志
-echo "备份时间: $(date)" > backups/$(date +%Y%m%d_%H%M%S)/backup-log.txt
-echo "备份原因: [更新原因]" >> backups/$(date +%Y%m%d_%H%M%S)/backup-log.txt
-```
-
----
-
-## 📝 Phase 2: 内容更新操作
-
-### 2.1 文字内容更新
-
-**方法1: 直接编辑主题文件**
-```bash
-# 从容器复制文件到本地
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php ./temp-index.php
-
-# 编辑文件 (使用文本编辑器)
-# 修改完成后复制回容器
-docker cp ./temp-index.php [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php
-
-# 验证更改
-curl -s http://localhost:8080/ | grep "新内容关键词"
-```
-
-**方法2: 使用WordPress后台**
-```bash
-# 访问WordPress后台
-# http://localhost:8080/wp-admin/
-
-# 创建管理员账户 (如果还未创建)
-docker exec [client-name]_wp wp --allow-root user create admin admin@example.com --role=administrator --user_pass=admin_password
-```
-
-### 2.2 图片和媒体更新
-
-**更新步骤：**
-```bash
-# 1. 准备新的媒体文件
-mkdir temp-media
-# 将新的图片文件放到temp-media目录
-
-# 2. 备份原始媒体文件
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/assets/images/ ./backup-images/
-
-# 3. 上传新媒体文件
-docker cp temp-media/new-image.jpg [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/assets/images/
-
-# 4. 更新HTML中的引用
-# 编辑主题文件，更新图片路径
-```
-
-### 2.3 样式更新 (CSS修改)
-
-**小幅样式调整：**
-```bash
-# 复制CSS文件到本地
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/style.css ./temp-style.css
-
-# 编辑CSS文件
-# 例如：修改颜色、字体大小、间距等
-
-# 复制回容器
-docker cp ./temp-style.css [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/style.css
-
-# 清除浏览器缓存并验证
-curl -s http://localhost:8080/ | head -20
-```
-
-**重大样式更改：**
-```bash
-# 创建新的CSS文件版本
-cp style.css style-v2.css
-
-# 在functions.php中更新版本号
-# wp_enqueue_style('[client-name]-main', get_template_directory_uri() . '/style.css', array(), '2.0.0');
-
-# 测试更改
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/style.css
-```
-
----
-
-## 🏗️ Phase 3: 功能模块更新
-
-### 3.1 添加新页面
-
-**创建新页面模板：**
-```php
-<?php
-/*
-Template Name: 新页面模板
-*/
-?>
-
-<!DOCTYPE html>
-<html <?php language_attributes(); ?>>
-<head>
-    <meta charset="<?php bloginfo('charset'); ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新页面标题</title>
-    <?php wp_head(); ?>
-</head>
-<body <?php body_class(); ?>>
-    <?php wp_body_open(); ?>
-    
-    <!-- 复制原网站的导航结构 -->
-    <nav>
-        <!-- 导航内容 -->
-    </nav>
-    
-    <!-- 新页面内容 -->
-    <main>
-        <h1>新页面内容</h1>
-        <!-- 页面具体内容 -->
-    </main>
-    
-    <!-- 复制原网站的页脚结构 -->
-    <footer>
-        <!-- 页脚内容 -->
-    </footer>
-    
-    <?php wp_footer(); ?>
-</body>
-</html>
-```
-
-```bash
-# 上传新页面模板
-docker cp page-new.php [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/
-
-# 在WordPress后台创建新页面并指定模板
-```
-
-### 3.2 修改导航菜单
-
-**更新导航链接：**
-```bash
-# 编辑主题文件中的导航部分
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php ./temp-index.php
-
-# 修改导航HTML结构
-# 例如：添加新的菜单项、更改链接地址
-
-# 上传修改后的文件
-docker cp ./temp-index.php [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/index.php
-```
-
-### 3.3 添加新功能组件
-
-**示例：添加联系表单**
-```php
-// 在functions.php中添加
-function client_contact_form_shortcode() {
-    ob_start();
-    ?>
-    <form class="contact-form" method="post" action="">
-        <div class="form-group">
-            <label for="name">姓名</label>
-            <input type="text" id="name" name="name" required>
-        </div>
-        <div class="form-group">
-            <label for="email">邮箱</label>
-            <input type="email" id="email" name="email" required>
-        </div>
-        <div class="form-group">
-            <label for="message">消息</label>
-            <textarea id="message" name="message" required></textarea>
-        </div>
-        <button type="submit">发送</button>
-    </form>
-    <?php
-    return ob_get_clean();
-}
-add_shortcode('contact_form', 'client_contact_form_shortcode');
-```
-
----
-
-## 🧪 Phase 4: 测试与验证
-
-### 4.1 更新后测试清单
-
-**基础功能测试：**
-- [ ] 主页加载正常
-- [ ] 导航链接功能正常
-- [ ] 新增内容显示正确
-- [ ] 样式更改生效
-- [ ] 移动端响应正常
-
-**深度测试：**
-```bash
-# 页面加载时间测试
-time curl -s http://localhost:8080/ > /dev/null
-
-# 检查所有链接
-curl -s http://localhost:8080/ | grep -o 'href="[^"]*"' | head -10
-
-# 验证图片加载
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/assets/images/main-logo.jpg
-
-# 检查CSS和JS资源
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/style.css
-```
-
-### 4.2 跨浏览器测试
-
-**模拟不同User-Agent测试：**
-```bash
-# 模拟移动设备
-curl -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X)" -s http://localhost:8080/ | head -20
-
-# 模拟平板设备
-curl -H "User-Agent: Mozilla/5.0 (iPad; CPU OS 14_7_1 like Mac OS X)" -s http://localhost:8080/ | head -20
-```
-
-### 4.3 内容一致性验证
-
-**内容检查脚本：**
 ```bash
 #!/bin/bash
-# content-check.sh
+# connect-client-site.sh - 连接客户站点进行内容管理
 
-echo "=== 内容更新验证报告 ==="
-echo "检查时间: $(date)"
-echo ""
+CLIENT_NAME="client-site"
+SITE_URL="https://client.com"
 
-echo "1. 页面标题检查:"
-curl -s http://localhost:8080/ | grep -o "<title>.*</title>"
-echo ""
-
-echo "2. 主要内容检查:"
-curl -s http://localhost:8080/ | grep -E "(新增内容|更新内容)" | head -5
-echo ""
-
-echo "3. 样式文件检查:"
-curl -I http://localhost:8080/wp-content/themes/[client-name]-theme/style.css | grep "HTTP\|Last-Modified"
-echo ""
-
-echo "4. 响应时间检查:"
-time curl -s http://localhost:8080/ > /dev/null
-echo "=== 检查完成 ==="
-```
-
----
-
-## 📊 Phase 5: 监控与维护
-
-### 5.1 定期健康检查
-
-**每日检查脚本：**
-```bash
-#!/bin/bash
-# daily-health-check.sh
-
-DATE=$(date +%Y%m%d)
-LOG_FILE="health-check-$DATE.log"
-
-echo "=== 日常健康检查 - $DATE ===" > $LOG_FILE
+echo "=== 连接 $CLIENT_NAME 站点 ==="
 
 # 检查容器状态
-echo "容器状态检查:" >> $LOG_FILE
-docker ps --filter "name=[client-name]" --format "table {{.Names}}\t{{.Status}}" >> $LOG_FILE
+echo "📊 检查容器状态..."
+CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' $CLIENT_NAME 2>/dev/null)
+if [ "$CONTAINER_STATUS" = "running" ]; then
+    echo "✅ 容器运行正常"
+else
+    echo "⚠️ 容器未运行，正在启动..."
+    docker start $CLIENT_NAME
+    sleep 10
+fi
 
-# 检查网站响应
-echo "网站响应检查:" >> $LOG_FILE
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/)
-echo "HTTP状态码: $HTTP_STATUS" >> $LOG_FILE
+# 验证WordPress状态
+echo "📱 验证WordPress状态..."
+docker exec $CLIENT_NAME wp core verify-checksums --allow-root
+docker exec $CLIENT_NAME wp db check --allow-root
 
-# 检查数据库连接
-echo "数据库连接检查:" >> $LOG_FILE
-docker exec [client-name]_mysql mysql -uwordpress -pwordpress wordpress -e "SELECT 1" &>> $LOG_FILE
+# 检查网站访问
+echo "🌐 检查网站访问..."
+HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $SITE_URL)
+if [ "$HTTP_STATUS" = "200" ]; then
+    echo "✅ 网站访问正常"
+else
+    echo "❌ 网站访问异常 - HTTP: $HTTP_STATUS"
+fi
 
-echo "检查完成时间: $(date)" >> $LOG_FILE
+echo "🔑 管理员登录信息:"
+docker exec $CLIENT_NAME wp user list --role=administrator --fields=user_login,user_email --allow-root
+
+echo "✅ 站点连接完成"
 ```
 
-### 5.2 性能监控
+### 1.2 创建内容更新备份
 
-**页面加载时间监控：**
 ```bash
 #!/bin/bash
-# performance-monitor.sh
+# create-content-backup.sh - 创建内容更新前备份
 
-for i in {1..5}; do
-    echo "测试 $i:"
-    time curl -s http://localhost:8080/ > /dev/null
-    echo "---"
-done
-```
+CLIENT_NAME="client-site"
+BACKUP_REASON="${1:-定期内容备份}"
 
-### 5.3 自动备份策略
+echo "=== 创建 $CLIENT_NAME 内容备份 ==="
 
-**自动备份脚本：**
-```bash
-#!/bin/bash
-# auto-backup.sh
-
-BACKUP_DIR="backups/auto-$(date +%Y%m%d_%H%M%S)"
+# 创建备份目录
+BACKUP_DIR="backups/content-$(date +%Y%m%d_%H%M%S)"
 mkdir -p $BACKUP_DIR
 
-# 备份主题文件
-echo "备份主题文件..."
-docker cp [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme $BACKUP_DIR/
+echo "📦 备份目录: $BACKUP_DIR"
 
 # 备份数据库
-echo "备份数据库..."
-docker exec [client-name]_mysql mysqldump -uwordpress -pwordpress wordpress > $BACKUP_DIR/wordpress-backup.sql
+echo "🗄️ 备份数据库..."
+docker exec $CLIENT_NAME wp db export /tmp/content-backup.sql --allow-root
+docker cp $CLIENT_NAME:/tmp/content-backup.sql $BACKUP_DIR/
+docker exec $CLIENT_NAME rm /tmp/content-backup.sql
 
-# 记录备份信息
-echo "备份完成时间: $(date)" > $BACKUP_DIR/backup-info.txt
-echo "备份类型: 自动备份" >> $BACKUP_DIR/backup-info.txt
+# 备份媒体文件
+echo "🖼️ 备份媒体文件..."
+docker exec $CLIENT_NAME tar -czf /tmp/uploads-backup.tar.gz wp-content/uploads/
+docker cp $CLIENT_NAME:/tmp/uploads-backup.tar.gz $BACKUP_DIR/
+docker exec $CLIENT_NAME rm /tmp/uploads-backup.tar.gz
 
-# 删除7天前的备份
-find backups/ -name "auto-*" -mtime +7 -exec rm -rf {} \;
+# 备份主题文件
+echo "🎨 备份主题文件..."
+docker exec $CLIENT_NAME tar -czf /tmp/theme-backup.tar.gz wp-content/themes/
+docker cp $CLIENT_NAME:/tmp/theme-backup.tar.gz $BACKUP_DIR/
+docker exec $CLIENT_NAME rm /tmp/theme-backup.tar.gz
 
-echo "自动备份完成: $BACKUP_DIR"
+# 创建备份记录
+cat > $BACKUP_DIR/backup-info.txt << EOF
+备份时间: $(date)
+备份原因: $BACKUP_REASON
+站点名称: $CLIENT_NAME
+WordPress版本: $(docker exec $CLIENT_NAME wp core version --allow-root)
+活跃插件: $(docker exec $CLIENT_NAME wp plugin list --status=active --field=name --allow-root | tr '\n' ', ')
+EOF
+
+echo "✅ 内容备份完成: $BACKUP_DIR"
 ```
 
 ---
 
-## 🔧 故障排除与回滚
+## 📝 Phase 2: 内容创建和编辑
 
-### 6.1 常见问题解决
+### 2.1 文章管理 (CLI方式)
 
-**问题1: 更新后页面显示异常**
 ```bash
-# 快速回滚到上一个备份
-LATEST_BACKUP=$(ls -1t backups/ | head -1)
-echo "回滚到备份: $LATEST_BACKUP"
+#!/bin/bash
+# article-management.sh - 文章管理操作
 
-# 恢复主题文件
-docker cp backups/$LATEST_BACKUP/[client-name]-theme/. [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/
+CLIENT_NAME="client-site"
 
-# 验证恢复
-curl -s http://localhost:8080/ | head -10
+echo "=== $CLIENT_NAME 文章管理 ==="
+
+# 创建新文章
+create_article() {
+    local title="$1"
+    local content="$2"
+    local category="$3"
+    
+    echo "📝 创建新文章: $title"
+    
+    POST_ID=$(docker exec $CLIENT_NAME wp post create \
+        --post_title="$title" \
+        --post_content="$content" \
+        --post_status=publish \
+        --post_category="$category" \
+        --porcelain \
+        --allow-root)
+    
+    echo "✅ 文章创建成功 - ID: $POST_ID"
+    echo "🔗 文章链接: $(docker exec $CLIENT_NAME wp post url $POST_ID --allow-root)"
+}
+
+# 更新文章
+update_article() {
+    local post_id="$1"
+    local title="$2"
+    local content="$3"
+    
+    echo "📝 更新文章 ID: $post_id"
+    
+    docker exec $CLIENT_NAME wp post update $post_id \
+        --post_title="$title" \
+        --post_content="$content" \
+        --allow-root
+    
+    echo "✅ 文章更新成功"
+}
+
+# 列出所有文章
+list_articles() {
+    echo "📋 所有文章列表:"
+    docker exec $CLIENT_NAME wp post list \
+        --field=ID,post_title,post_status,post_date \
+        --allow-root
+}
+
+# 删除文章
+delete_article() {
+    local post_id="$1"
+    
+    echo "🗑️ 删除文章 ID: $post_id"
+    docker exec $CLIENT_NAME wp post delete $post_id --force --allow-root
+    echo "✅ 文章删除成功"
+}
+
+# 示例使用
+create_article "公司最新动态" "<h2>重要公告</h2><p>我们很高兴地宣布...</p>" "新闻"
+list_articles
 ```
 
-**问题2: CSS样式丢失**
+### 2.2 页面管理 (CLI方式)
+
 ```bash
-# 检查CSS文件是否存在
-docker exec [client-name]_wp ls -la /var/www/html/wp-content/themes/[client-name]-theme/style.css
+#!/bin/bash
+# page-management.sh - 页面管理操作
 
-# 重新上传CSS文件
-docker cp backups/$LATEST_BACKUP/[client-name]-theme/style.css [client-name]_wp:/var/www/html/wp-content/themes/[client-name]-theme/
+CLIENT_NAME="client-site"
 
-# 强制刷新缓存
-curl -H "Cache-Control: no-cache" http://localhost:8080/
+echo "=== $CLIENT_NAME 页面管理 ==="
+
+# 创建新页面
+create_page() {
+    local title="$1"
+    local content="$2"
+    local template="$3"
+    
+    echo "📄 创建新页面: $title"
+    
+    PAGE_ID=$(docker exec $CLIENT_NAME wp post create \
+        --post_type=page \
+        --post_title="$title" \
+        --post_content="$content" \
+        --post_status=publish \
+        --page_template="$template" \
+        --porcelain \
+        --allow-root)
+    
+    echo "✅ 页面创建成功 - ID: $PAGE_ID"
+    echo "🔗 页面链接: $(docker exec $CLIENT_NAME wp post url $PAGE_ID --allow-root)"
+}
+
+# 更新页面内容
+update_page() {
+    local page_id="$1"
+    local content="$2"
+    
+    echo "📄 更新页面 ID: $page_id"
+    
+    docker exec $CLIENT_NAME wp post update $page_id \
+        --post_content="$content" \
+        --allow-root
+    
+    echo "✅ 页面更新成功"
+}
+
+# 设置首页
+set_homepage() {
+    local page_id="$1"
+    
+    echo "🏠 设置首页为页面 ID: $page_id"
+    
+    docker exec $CLIENT_NAME wp option update show_on_front page --allow-root
+    docker exec $CLIENT_NAME wp option update page_on_front $page_id --allow-root
+    
+    echo "✅ 首页设置成功"
+}
+
+# 列出所有页面
+list_pages() {
+    echo "📋 所有页面列表:"
+    docker exec $CLIENT_NAME wp post list \
+        --post_type=page \
+        --field=ID,post_title,post_status \
+        --allow-root
+}
+
+# 示例使用
+create_page "关于我们" "<h1>关于我们</h1><p>公司介绍内容...</p>" "page-about.php"
+list_pages
 ```
 
-**问题3: 数据库数据丢失**
+### 2.3 媒体管理 (CLI方式)
+
 ```bash
-# 停止WordPress容器
-docker stop [client-name]_wp
+#!/bin/bash
+# media-management.sh - 媒体文件管理
 
-# 恢复数据库
-docker exec [client-name]_mysql mysql -uwordpress -pwordpress wordpress < backups/$LATEST_BACKUP/wordpress-backup.sql
+CLIENT_NAME="client-site"
 
-# 重启WordPress容器
-docker start [client-name]_wp
-```
+echo "=== $CLIENT_NAME 媒体管理 ==="
 
-### 6.2 版本控制策略
+# 上传媒体文件
+upload_media() {
+    local file_path="$1"
+    local title="$2"
+    local description="$3"
+    
+    echo "🖼️ 上传媒体文件: $(basename $file_path)"
+    
+    # 复制文件到容器
+    docker cp "$file_path" $CLIENT_NAME:/tmp/upload-file
+    
+    # 导入媒体文件
+    MEDIA_ID=$(docker exec $CLIENT_NAME wp media import /tmp/upload-file \
+        --title="$title" \
+        --caption="$description" \
+        --porcelain \
+        --allow-root)
+    
+    # 清理临时文件
+    docker exec $CLIENT_NAME rm /tmp/upload-file
+    
+    echo "✅ 媒体上传成功 - ID: $MEDIA_ID"
+    echo "🔗 媒体链接: $(docker exec $CLIENT_NAME wp post url $MEDIA_ID --allow-root)"
+}
 
-**Git版本管理：**
-```bash
-# 初始化Git仓库
-cd themes/[client-name]-theme
-git init
-git add .
-git commit -m "初始主题版本"
+# 列出媒体文件
+list_media() {
+    echo "📋 媒体文件列表:"
+    docker exec $CLIENT_NAME wp post list \
+        --post_type=attachment \
+        --field=ID,post_title,post_mime_type \
+        --allow-root
+}
 
-# 创建开发分支
-git checkout -b development
+# 删除媒体文件
+delete_media() {
+    local media_id="$1"
+    
+    echo "🗑️ 删除媒体文件 ID: $media_id"
+    docker exec $CLIENT_NAME wp post delete $media_id --force --allow-root
+    echo "✅ 媒体文件删除成功"
+}
 
-# 每次更新后提交
-git add .
-git commit -m "更新内容: [具体更新说明]"
+# 优化图片
+optimize_images() {
+    echo "🔧 优化图片设置..."
+    
+    # 设置图片尺寸
+    docker exec $CLIENT_NAME wp option update thumbnail_size_w 150 --allow-root
+    docker exec $CLIENT_NAME wp option update thumbnail_size_h 150 --allow-root
+    docker exec $CLIENT_NAME wp option update medium_size_w 300 --allow-root
+    docker exec $CLIENT_NAME wp option update medium_size_h 300 --allow-root
+    docker exec $CLIENT_NAME wp option update large_size_w 1024 --allow-root
+    docker exec $CLIENT_NAME wp option update large_size_h 1024 --allow-root
+    
+    echo "✅ 图片设置优化完成"
+}
 
-# 合并到主分支
-git checkout main
-git merge development
-git tag -a v1.1 -m "版本1.1 - [更新说明]"
+# 示例使用
+# upload_media "./logo.png" "公司Logo" "公司官方标志"
+list_media
+optimize_images
 ```
 
 ---
 
-## 📋 更新检查清单
+## 🎨 Phase 3: 主题和样式管理
 
-### 更新前检查
-- [ ] 创建完整备份
-- [ ] 确认更新需求和范围
-- [ ] 准备必要的新资源 (图片、文字等)
-- [ ] 制定回滚计划
+### 3.1 主题定制
 
-### 更新中检查
-- [ ] 逐步实施更改
-- [ ] 每个步骤后进行测试
-- [ ] 记录更改内容
-- [ ] 保持备份的时效性
+```bash
+#!/bin/bash
+# theme-customization.sh - 主题定制操作
 
-### 更新后检查
-- [ ] 完整功能测试
-- [ ] 性能对比测试
-- [ ] 多设备兼容性测试
-- [ ] 更新文档记录
-- [ ] 通知相关人员
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 主题定制 ==="
+
+# 更新站点基本信息
+update_site_info() {
+    local site_title="$1"
+    local site_description="$2"
+    
+    echo "🏠 更新站点信息..."
+    
+    docker exec $CLIENT_NAME wp option update blogname "$site_title" --allow-root
+    docker exec $CLIENT_NAME wp option update blogdescription "$site_description" --allow-root
+    
+    echo "✅ 站点信息更新完成"
+}
+
+# 更新站点Logo
+update_site_logo() {
+    local logo_path="$1"
+    
+    echo "🎨 更新站点Logo..."
+    
+    # 上传Logo文件
+    docker cp "$logo_path" $CLIENT_NAME:/tmp/new-logo
+    LOGO_ID=$(docker exec $CLIENT_NAME wp media import /tmp/new-logo --porcelain --allow-root)
+    docker exec $CLIENT_NAME rm /tmp/new-logo
+    
+    # 设置为站点Logo
+    docker exec $CLIENT_NAME wp option update site_logo $LOGO_ID --allow-root
+    
+    echo "✅ Logo更新完成 - Media ID: $LOGO_ID"
+}
+
+# 自定义CSS
+add_custom_css() {
+    local css_content="$1"
+    
+    echo "🎨 添加自定义CSS..."
+    
+    # 创建自定义CSS文件
+    echo "$css_content" | docker exec -i $CLIENT_NAME tee -a /var/www/html/wp-content/themes/active-theme/custom.css
+    
+    echo "✅ 自定义CSS添加完成"
+}
+
+# 菜单管理
+manage_menu() {
+    local menu_name="$1"
+    local location="$2"
+    
+    echo "🧭 管理菜单: $menu_name"
+    
+    # 创建菜单
+    MENU_ID=$(docker exec $CLIENT_NAME wp menu create "$menu_name" --porcelain --allow-root)
+    
+    # 添加页面到菜单
+    docker exec $CLIENT_NAME wp menu item add-post $MENU_ID $(docker exec $CLIENT_NAME wp post list --post_type=page --field=ID --posts_per_page=5 --allow-root) --allow-root
+    
+    # 分配菜单位置
+    docker exec $CLIENT_NAME wp menu location assign $MENU_ID $location --allow-root
+    
+    echo "✅ 菜单创建完成 - ID: $MENU_ID"
+}
+
+# 示例使用
+update_site_info "客户公司官网" "专业的行业解决方案提供商"
+# update_site_logo "./company-logo.png"
+manage_menu "主导航" "primary"
+```
+
+### 3.2 样式更新
+
+```bash
+#!/bin/bash
+# style-update.sh - 样式更新操作
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 样式更新 ==="
+
+# 备份当前样式
+backup_styles() {
+    echo "📦 备份当前样式文件..."
+    
+    STYLE_BACKUP_DIR="backups/styles-$(date +%Y%m%d_%H%M%S)"
+    mkdir -p $STYLE_BACKUP_DIR
+    
+    # 备份主题样式文件
+    docker exec $CLIENT_NAME find /var/www/html/wp-content/themes -name "*.css" -exec cp {} /tmp/ \;
+    docker cp $CLIENT_NAME:/tmp/ $STYLE_BACKUP_DIR/
+    
+    echo "✅ 样式备份完成: $STYLE_BACKUP_DIR"
+}
+
+# 更新CSS变量
+update_css_variables() {
+    local primary_color="$1"
+    local secondary_color="$2"
+    local font_family="$3"
+    
+    echo "🎨 更新CSS变量..."
+    
+    # 创建CSS变量文件
+    cat > /tmp/custom-variables.css << EOF
+:root {
+    --primary-color: $primary_color;
+    --secondary-color: $secondary_color;
+    --font-family: $font_family;
+}
+EOF
+    
+    # 复制到容器
+    docker cp /tmp/custom-variables.css $CLIENT_NAME:/var/www/html/wp-content/themes/active-theme/
+    rm /tmp/custom-variables.css
+    
+    echo "✅ CSS变量更新完成"
+}
+
+# 响应式样式调整
+update_responsive_styles() {
+    echo "📱 更新响应式样式..."
+    
+    cat > /tmp/responsive.css << EOF
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .navbar {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 1.5rem;
+    }
+    
+    .button {
+        width: 100%;
+    }
+}
+EOF
+    
+    docker cp /tmp/responsive.css $CLIENT_NAME:/var/www/html/wp-content/themes/active-theme/
+    rm /tmp/responsive.css
+    
+    echo "✅ 响应式样式更新完成"
+}
+
+# 验证样式更新
+verify_styles() {
+    echo "✅ 验证样式更新..."
+    
+    # 检查CSS文件
+    docker exec $CLIENT_NAME ls -la /var/www/html/wp-content/themes/active-theme/*.css
+    
+    # 测试网站访问
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://client.com/)
+    echo "网站状态: $HTTP_STATUS"
+    
+    # 检查CSS加载
+    curl -I https://client.com/wp-content/themes/active-theme/style.css
+}
+
+# 示例使用
+backup_styles
+update_css_variables "#007cba" "#005a87" "'Helvetica Neue', sans-serif"
+update_responsive_styles
+verify_styles
+```
 
 ---
 
-## 📈 最佳实践
+## 🔧 Phase 4: 用户和权限管理
 
-### 1. 更新频率建议
-- **紧急修复**: 立即执行
-- **内容更新**: 每周1-2次
-- **功能升级**: 每月1次
-- **大版本更新**: 每季度1次
+### 4.1 用户管理
 
-### 2. 团队协作
-- 使用统一的命名规范
-- 建立更新申请流程
-- 定期进行代码审查
-- 维护详细的更改日志
+```bash
+#!/bin/bash
+# user-management.sh - 用户管理操作
 
-### 3. 安全考虑
-- 定期更新WordPress核心
-- 监控安全漏洞
-- 使用强密码策略
-- 限制管理员访问权限
+CLIENT_NAME="client-site"
 
-### 4. 性能优化
-- 压缩图片文件
-- 最小化CSS和JavaScript
-- 使用浏览器缓存
-- 定期清理数据库
+echo "=== $CLIENT_NAME 用户管理 ==="
 
-通过遵循这个内容更新手册，可以确保WordPress网站的持续稳定运行和高效的内容管理。
+# 创建新用户
+create_user() {
+    local username="$1"
+    local email="$2"
+    local role="$3"
+    local password="$4"
+    
+    echo "👤 创建新用户: $username"
+    
+    USER_ID=$(docker exec $CLIENT_NAME wp user create $username $email \
+        --role=$role \
+        --user_pass=$password \
+        --porcelain \
+        --allow-root)
+    
+    echo "✅ 用户创建成功 - ID: $USER_ID"
+}
+
+# 更新用户信息
+update_user() {
+    local user_id="$1"
+    local field="$2"
+    local value="$3"
+    
+    echo "👤 更新用户 ID: $user_id"
+    
+    docker exec $CLIENT_NAME wp user update $user_id --$field="$value" --allow-root
+    
+    echo "✅ 用户信息更新完成"
+}
+
+# 列出所有用户
+list_users() {
+    echo "📋 用户列表:"
+    docker exec $CLIENT_NAME wp user list \
+        --fields=ID,user_login,user_email,roles \
+        --allow-root
+}
+
+# 删除用户
+delete_user() {
+    local user_id="$1"
+    local reassign_to="$2"
+    
+    echo "🗑️ 删除用户 ID: $user_id"
+    
+    if [ -n "$reassign_to" ]; then
+        docker exec $CLIENT_NAME wp user delete $user_id --reassign=$reassign_to --allow-root
+    else
+        docker exec $CLIENT_NAME wp user delete $user_id --allow-root
+    fi
+    
+    echo "✅ 用户删除成功"
+}
+
+# 重置用户密码
+reset_password() {
+    local username="$1"
+    local new_password="$2"
+    
+    echo "🔑 重置用户密码: $username"
+    
+    docker exec $CLIENT_NAME wp user update $username --user_pass=$new_password --allow-root
+    
+    echo "✅ 密码重置完成"
+}
+
+# 示例使用
+list_users
+# create_user "editor01" "editor@client.com" "editor" "secure_password_123"
+```
+
+### 4.2 权限管理
+
+```bash
+#!/bin/bash
+# permission-management.sh - 权限管理操作
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 权限管理 ==="
+
+# 检查用户权限
+check_permissions() {
+    local username="$1"
+    
+    echo "🔍 检查用户权限: $username"
+    
+    docker exec $CLIENT_NAME wp user get $username --fields=roles,allcaps --allow-root
+}
+
+# 分配用户角色
+assign_role() {
+    local user_id="$1"
+    local role="$2"
+    
+    echo "🎭 分配角色: $role 给用户 ID: $user_id"
+    
+    docker exec $CLIENT_NAME wp user set-role $user_id $role --allow-root
+    
+    echo "✅ 角色分配完成"
+}
+
+# 列出所有角色
+list_roles() {
+    echo "📋 系统角色列表:"
+    docker exec $CLIENT_NAME wp role list --allow-root
+}
+
+# 创建自定义角色
+create_custom_role() {
+    local role_name="$1"
+    local display_name="$2"
+    local capabilities="$3"
+    
+    echo "🎭 创建自定义角色: $role_name"
+    
+    docker exec $CLIENT_NAME wp role create $role_name "$display_name" --allow-root
+    
+    # 添加权限
+    if [ -n "$capabilities" ]; then
+        IFS=',' read -ra CAPS <<< "$capabilities"
+        for cap in "${CAPS[@]}"; do
+            docker exec $CLIENT_NAME wp cap add $role_name $cap --allow-root
+        done
+    fi
+    
+    echo "✅ 自定义角色创建完成"
+}
+
+# 示例使用
+list_roles
+check_permissions "admin"
+# create_custom_role "content_manager" "内容管理员" "edit_posts,edit_pages,upload_files"
+```
+
+---
+
+## 📊 Phase 5: 内容分析和报告
+
+### 5.1 内容统计
+
+```bash
+#!/bin/bash
+# content-analytics.sh - 内容分析统计
+
+CLIENT_NAME="client-site"
+
+echo "=== $CLIENT_NAME 内容分析 ==="
+
+# 生成内容报告
+generate_content_report() {
+    local report_file="reports/content-report-$(date +%Y%m%d).html"
+    
+    echo "📊 生成内容报告..."
+    
+    cat > $report_file << EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>内容分析报告 - $(date +%Y年%m月%d日)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .number { font-size: 2em; color: #007cba; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>$CLIENT_NAME 内容分析报告</h1>
+    <p>报告生成时间: $(date)</p>
+    
+    <div class="section">
+        <h2>📝 文章统计</h2>
+        <p>发布文章数: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_status=publish --field=ID --allow-root | wc -l)</span></p>
+        <p>草稿文章数: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_status=draft --field=ID --allow-root | wc -l)</span></p>
+        <p>待审核文章: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_status=pending --field=ID --allow-root | wc -l)</span></p>
+    </div>
+    
+    <div class="section">
+        <h2>📄 页面统计</h2>
+        <p>发布页面数: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_type=page --post_status=publish --field=ID --allow-root | wc -l)</span></p>
+        <p>草稿页面数: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_type=page --post_status=draft --field=ID --allow-root | wc -l)</span></p>
+    </div>
+    
+    <div class="section">
+        <h2>🖼️ 媒体统计</h2>
+        <p>媒体文件数: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_type=attachment --field=ID --allow-root | wc -l)</span></p>
+        <p>图片文件数: <span class="number">$(docker exec $CLIENT_NAME wp post list --post_type=attachment --post_mime_type=image --field=ID --allow-root | wc -l)</span></p>
+    </div>
+    
+    <div class="section">
+        <h2>👥 用户统计</h2>
+        <p>总用户数: <span class="number">$(docker exec $CLIENT_NAME wp user list --field=ID --allow-root | wc -l)</span></p>
+        <p>管理员数: <span class="number">$(docker exec $CLIENT_NAME wp user list --role=administrator --field=ID --allow-root | wc -l)</span></p>
+        <p>编辑者数: <span class="number">$(docker exec $CLIENT_NAME wp user list --role=editor --field=ID --allow-root | wc -l)</span></p>
+    </div>
+    
+    <div class="section">
+        <h2>💬 评论统计</h2>
+        <p>已发布评论: <span class="number">$(docker exec $CLIENT_NAME wp comment list --status=approve --field=ID --allow-root | wc -l)</span></p>
+        <p>待审核评论: <span class="number">$(docker exec $CLIENT_NAME wp comment list --status=hold --field=ID --allow-root | wc -l)</span></p>
+        <p>垃圾评论: <span class="number">$(docker exec $CLIENT_NAME wp comment list --status=spam --field=ID --allow-root | wc -l)</span></p>
+    </div>
+</body>
+</html>
+EOF
+    
+    echo "✅ 内容报告生成完成: $report_file"
+}
+
+# 分析内容趋势
+analyze_content_trends() {
+    echo "📈 分析内容发布趋势..."
+    
+    echo "最近30天发布的文章:"
+    docker exec $CLIENT_NAME wp post list \
+        --post_status=publish \
+        --after="30 days ago" \
+        --field=post_title,post_date \
+        --allow-root
+    
+    echo "最受欢迎的分类:"
+    docker exec $CLIENT_NAME wp term list category \
+        --field=name,count \
+        --orderby=count \
+        --order=desc \
+        --allow-root
+}
+
+# 内容质量检查
+check_content_quality() {
+    echo "🔍 检查内容质量..."
+    
+    # 检查空内容
+    echo "空内容文章数:"
+    docker exec $CLIENT_NAME wp post list \
+        --post_status=publish \
+        --field=ID \
+        --allow-root | while read post_id; do
+        content_length=$(docker exec $CLIENT_NAME wp post get $post_id --field=post_content --allow-root | wc -c)
+        if [ $content_length -lt 100 ]; then
+            echo "文章 ID $post_id 内容过短 ($content_length 字符)"
+        fi
+    done
+    
+    # 检查缺少特色图片的文章
+    echo "缺少特色图片的文章:"
+    docker exec $CLIENT_NAME wp post list \
+        --post_status=publish \
+        --meta_key=_thumbnail_id \
+        --meta_compare=NOT EXISTS \
+        --field=ID,post_title \
+        --allow-root
+}
+
+# 示例使用
+generate_content_report
+analyze_content_trends
+check_content_quality
+```
+
+---
+
+## 📋 内容管理检查清单
+
+### 日常内容管理
+- [ ] 检查新评论和回复
+- [ ] 更新重要页面内容
+- [ ] 发布新文章或动态
+- [ ] 检查并修复失效链接
+- [ ] 优化图片文件大小
+
+### 周度内容维护
+- [ ] 审核用户提交的内容
+- [ ] 更新菜单和导航结构
+- [ ] 检查SEO设置和meta信息
+- [ ] 备份重要内容变更
+- [ ] 分析内容性能数据
+
+### 月度内容审查
+- [ ] 生成内容分析报告
+- [ ] 清理过期或无用内容
+- [ ] 优化网站内容结构
+- [ ] 更新公司信息和联系方式
+- [ ] 制定下月内容计划
+
+---
+
+## 🎯 内容管理最佳实践
+
+### 1. 内容质量标准
+- 确保所有内容都有明确的目标受众
+- 保持品牌声音和风格的一致性
+- 定期更新过时信息
+- 使用高质量的图片和媒体
+
+### 2. SEO友好内容
+- 每个页面都有独特的标题和描述
+- 使用合适的标题层级结构
+- 添加alt标签给所有图片
+- 内部链接结构合理
+
+### 3. 用户体验优化
+- 保持网站导航简洁明了
+- 确保所有页面加载速度快
+- 提供清晰的联系方式
+- 定期测试表单和功能
+
+### 4. 安全和备份
+- 定期备份所有内容更改
+- 使用强密码和双因素认证
+- 限制用户权限到最低需要
+- 监控异常活动和登录
+
+---
+
+**通过这套完整的内容管理手册，确保客户WordPress站点的内容始终保持新鲜、准确和用户友好。**

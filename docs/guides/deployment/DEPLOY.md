@@ -1,236 +1,293 @@
-# 🚀 CardPlanet WordPress Docker 部署指南
+# 🚀 WordPress 标准化部署指南
 
-使用指定Docker镜像的专业部署方案，避免镜像拉取问题。
+基于 `coopotfan/wordpress-dev` 标准镜像的专业部署方案，实现一键部署到任何环境。
 
-## 📋 所需镜像
+## 📋 核心优势
+
+- **标准化镜像**: 统一的 `coopotfan/wordpress-dev:latest` 基础镜像
+- **开箱即用**: 客户收到完全配置好的WordPress站点
+- **CLI驱动**: 完全通过WP-CLI实现自动化配置
+- **零配置交付**: 无需客户进行任何手动设置
+
+## 🎯 快速部署方式
+
+### 方式1: 一键部署脚本 (推荐)
 
 ```bash
-WordPress: c23b6f0d5357 (wordpress:latest)
-MySQL: 5107333e08a8 (mysql:5.7)
-WP-CLI: 78f7b77ef7b5 (wordpress:cli-php8.2)
-phpMyAdmin: 21c6d797c79c (phpmyadmin:latest)
+# 客户项目一键部署
+./deploy-production.sh \
+  "客户公司网站" \
+  "admin" \
+  "secure_password_123" \
+  "admin@client.com" \
+  "https://client.com" \
+  "zh_CN"
+
+# 结果: 完全配置好的WordPress站点，客户可立即使用
 ```
 
-## 🚀 一键部署脚本
+### 方式2: Docker 直接部署
 
-### 1. 启动数据库
 ```bash
-docker run -d \
-  --name cardplanet_mysql \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=wordpress \
-  -e MYSQL_USER=wordpress \
-  -e MYSQL_PASSWORD=wordpress \
-  -v $(pwd)/mysql-data:/var/lib/mysql \
-  5107333e08a8
+# 基础版本 - 快速启动
+docker run -d -p 80:80 \
+  -e WORDPRESS_AUTO_SETUP=true \
+  -e WORDPRESS_TITLE="客户网站" \
+  -e WORDPRESS_ADMIN_USER=admin \
+  -e WORDPRESS_ADMIN_PASSWORD=secure123 \
+  -e WORDPRESS_ADMIN_EMAIL=admin@client.com \
+  -e WORDPRESS_URL=https://client.com \
+  -e WORDPRESS_LOCALE=zh_CN \
+  coopotfan/wordpress-dev:latest
+
+# 完整版本 - 包含插件和定制
+docker run -d -p 80:80 \
+  --name client-production \
+  -e WORDPRESS_AUTO_SETUP=true \
+  -e WORDPRESS_TITLE="客户公司专业网站" \
+  -e WORDPRESS_ADMIN_USER=admin \
+  -e WORDPRESS_ADMIN_PASSWORD=client_secure_2024 \
+  -e WORDPRESS_ADMIN_EMAIL=admin@client.com \
+  -e WORDPRESS_URL=https://client.com \
+  -e WORDPRESS_LOCALE=zh_CN \
+  -e WORDPRESS_THEME=client-custom-theme \
+  -e WORDPRESS_PLUGINS="contact-form-7,yoast-seo,wordfence" \
+  -v /data/client-content:/var/www/html/wp-content \
+  coopotfan/wordpress-dev:latest
 ```
 
-### 2. 启动WordPress
-```bash
-docker run -d \
-  --name cardplanet_wp \
-  --link cardplanet_mysql:mysql \
-  -e WORDPRESS_DB_HOST=mysql \
-  -e WORDPRESS_DB_USER=wordpress \
-  -e WORDPRESS_DB_PASSWORD=wordpress \
-  -e WORDPRESS_DB_NAME=wordpress \
-  -p 8080:80 \
-  -v $(pwd)/wordpress:/var/www/html \
-  -v $(pwd)/themes:/var/www/html/wp-content/themes \
-  c23b6f0d5357
+### 方式3: Docker Compose 部署
+
+```yaml
+# docker-compose.client.yml
+version: '3.8'
+
+services:
+  wordpress:
+    image: coopotfan/wordpress-dev:latest
+    container_name: client-wordpress
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # 自动设置
+      WORDPRESS_AUTO_SETUP: "true"
+      
+      # 客户信息
+      WORDPRESS_TITLE: "客户公司网站"
+      WORDPRESS_ADMIN_USER: "admin"
+      WORDPRESS_ADMIN_PASSWORD: "client_secure_password"
+      WORDPRESS_ADMIN_EMAIL: "admin@client.com"
+      WORDPRESS_URL: "https://client.com"
+      WORDPRESS_LOCALE: "zh_CN"
+      
+      # 功能配置
+      WORDPRESS_THEME: "client-theme"
+      WORDPRESS_PLUGINS: "contact-form-7,yoast-seo,woocommerce"
+      
+      # 数据库配置
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: client_db
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: secure_db_password
+      
+    volumes:
+      - client_content:/var/www/html/wp-content
+      - client_logs:/var/log/wordpress
+      - ./client-theme:/var/www/html/wp-content/themes/client-theme
+      
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - client-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: client-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_password
+      MYSQL_DATABASE: client_db
+      MYSQL_USER: wp_user
+      MYSQL_PASSWORD: secure_db_password
+    volumes:
+      - client_mysql_data:/var/lib/mysql
+    networks:
+      - client-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  client_content:
+  client_mysql_data:
+  client_logs:
+
+networks:
+  client-network:
+    driver: bridge
+
+# 启动: docker-compose -f docker-compose.client.yml up -d
 ```
 
-### 3. 启动phpMyAdmin
+## 🌐 云平台部署
+
+### AWS 部署
+
 ```bash
-docker run -d \
-  --name cardplanet_pma \
-  --link cardplanet_mysql:db \
-  -e PMA_HOST=db \
-  -p 8081:80 \
-  21c6d797c79c
+# AWS ECS/Fargate
+aws ecs create-service \
+  --service-name client-wordpress \
+  --task-definition client-wordpress-task:1 \
+  --desired-count 1 \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx],securityGroups=[sg-xxx],assignPublicIp=ENABLED}"
+
+# AWS EC2
+docker run -d -p 80:80 \
+  -e WORDPRESS_AUTO_SETUP=true \
+  -e WORDPRESS_TITLE="客户网站" \
+  -e WORDPRESS_URL=https://client.amazonaws.com \
+  coopotfan/wordpress-dev:latest
 ```
 
-## 🛠️ WP-CLI 开发命令
+### Google Cloud 部署
 
-### 基础命令格式
 ```bash
-# WP-CLI命令模板
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp [命令] --allow-root
+# Google Cloud Run
+gcloud run deploy client-wordpress \
+  --image coopotfan/wordpress-dev:latest \
+  --platform managed \
+  --port 80 \
+  --set-env-vars WORDPRESS_AUTO_SETUP=true,WORDPRESS_TITLE="客户网站"
+
+# Google Compute Engine
+docker run -d -p 80:80 \
+  -e WORDPRESS_AUTO_SETUP=true \
+  -e WORDPRESS_URL=https://client.googleapis.com \
+  coopotfan/wordpress-dev:latest
 ```
 
-### 常用开发命令
+### Azure 部署
 
-#### 安装ACF插件
 ```bash
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp plugin install advanced-custom-fields --activate --allow-root
+# Azure Container Instances
+az container create \
+  --resource-group client-rg \
+  --name client-wordpress \
+  --image coopotfan/wordpress-dev:latest \
+  --ports 80 \
+  --environment-variables WORDPRESS_AUTO_SETUP=true WORDPRESS_TITLE="客户网站"
 ```
 
-#### 创建管理员用户
+## 🔧 部署后配置
+
+### 验证部署状态
+
 ```bash
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp user create petron admin@cardplanet.local \
-  --role=administrator \
-  --user_pass=Petron12345^ \
-  --allow-root
+# 检查容器状态
+docker ps | grep client
+
+# 检查WordPress状态
+curl -I https://client.com
+
+# 验证CLI功能
+docker exec client-wordpress wp cli info --allow-root
+
+# 检查管理员用户
+docker exec client-wordpress wp user list --allow-root
+
+# 验证主题和插件
+docker exec client-wordpress wp theme list --allow-root
+docker exec client-wordpress wp plugin list --allow-root
 ```
 
-#### 激活主题
+### 安全加固
+
 ```bash
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp theme activate cardplanet-theme --allow-root
+# 更新安全密钥
+docker exec client-wordpress wp config shuffle-salts --allow-root
+
+# 设置安全选项
+docker exec client-wordpress wp config set WP_DEBUG false --allow-root
+docker exec client-wordpress wp config set DISALLOW_FILE_EDIT true --allow-root
+docker exec client-wordpress wp config set FORCE_SSL_ADMIN true --allow-root
+
+# 优化性能
+docker exec client-wordpress wp db optimize --allow-root
+docker exec client-wordpress wp cache flush --allow-root
 ```
 
-#### 创建首页
+## 📊 环境配置对比
+
+| 环境类型 | 部署方式 | 配置时间 | 维护复杂度 | 推荐场景 |
+|---------|---------|---------|-----------|---------|
+| 开发环境 | Docker直接运行 | 1分钟 | 低 | 本地开发测试 |
+| 测试环境 | Docker Compose | 3分钟 | 中 | 功能验证 |
+| 生产环境 | 一键部署脚本 | 5分钟 | 低 | 客户交付 |
+| 云平台 | 容器服务 | 10分钟 | 中 | 大规模部署 |
+
+## 🚀 客户交付清单
+
+### 交付包内容
+1. **完全配置的WordPress网站**
+2. **管理员登录凭据**
+3. **部署脚本和配置文件**
+4. **运维监控命令**
+5. **备份和恢复文档**
+
+### 客户收到后即可:
+- ✅ 直接访问网站 - 无需配置
+- ✅ 登录后台管理 - 账号密码已设置
+- ✅ 开始发布内容 - 所有功能就绪
+- ✅ 使用所有插件 - 已安装激活
+- ✅ 进行SEO优化 - 工具已配置
+
+### 交付标准
 ```bash
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp post create \
-  --post_type=page \
-  --post_title="CardPlanet首页" \
-  --post_status=publish \
-  --allow-root
+# 客户验收清单
+echo "网站访问: ✅ $(curl -s -o /dev/null -w "%{http_code}" https://client.com)"
+echo "后台登录: ✅ 管理员账号可正常登录"
+echo "主题激活: ✅ $(docker exec client-wordpress wp theme status --allow-root | grep Active)"
+echo "插件功能: ✅ $(docker exec client-wordpress wp plugin list --status=active --allow-root | wc -l) 个插件已激活"
+echo "内容创建: ✅ 示例页面和文章已创建"
+echo "菜单配置: ✅ 导航菜单已设置"
+echo "SEO配置: ✅ 基础SEO设置已完成"
 ```
 
-#### 设置首页
+## 🔄 部署后运维
+
+### 日常监控
 ```bash
-# 获取页面ID
-PAGE_ID=$(docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp post list --post_type=page --name=cardplanet首页 --field=ID --allow-root)
+# 站点健康检查
+docker exec client-wordpress wp doctor check --allow-root
 
-# 设置为首页
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp option update show_on_front page --allow-root
+# 性能监控
+docker exec client-wordpress wp eval 'echo "Memory: " . size_format(memory_get_usage());' --allow-root
 
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp option update page_on_front $PAGE_ID --allow-root
+# 更新检查
+docker exec client-wordpress wp core check-update --allow-root
+docker exec client-wordpress wp plugin list --update=available --allow-root
 ```
 
-## 🔧 快捷脚本
-
-### 创建别名函数
+### 备份策略
 ```bash
-# 添加到 ~/.bashrc 或 ~/.zshrc
-alias wp-cli="docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp"
-
-# 使用示例
-wp-cli plugin list --allow-root
-wp-cli theme list --allow-root
-wp-cli user list --allow-root
-```
-
-### 完整初始化脚本
-```bash
+# 自动备份脚本
 #!/bin/bash
-# cardplanet-init.sh
+DATE=$(date +%Y%m%d_%H%M%S)
 
-echo "🚀 初始化CardPlanet WordPress..."
+# 备份数据库
+docker exec client-wordpress wp db export /backups/db_$DATE.sql --allow-root
 
-# 等待数据库启动
-sleep 10
+# 备份文件
+docker exec client-wordpress tar -czf /backups/content_$DATE.tar.gz wp-content/
 
-# 安装WordPress
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp core install \
-  --url=http://localhost:8080 \
-  --title="CardPlanet" \
-  --admin_user=petron \
-  --admin_password=Petron12345^ \
-  --admin_email=admin@cardplanet.local \
-  --allow-root
-
-# 安装ACF
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp plugin install advanced-custom-fields --activate --allow-root
-
-# 激活主题
-docker run --rm \
-  --link cardplanet_mysql:mysql \
-  --link cardplanet_wp:wordpress \
-  -v $(pwd)/wordpress:/var/www/html \
-  78f7b77ef7b5 wp theme activate cardplanet-theme --allow-root
-
-echo "✅ CardPlanet初始化完成！"
+echo "备份完成: $DATE"
 ```
-
-## 📊 容器管理
-
-### 启动所有服务
-```bash
-# 1. MySQL
-docker start cardplanet_mysql
-
-# 2. WordPress  
-docker start cardplanet_wp
-
-# 3. phpMyAdmin
-docker start cardplanet_pma
-```
-
-### 停止所有服务
-```bash
-docker stop cardplanet_pma cardplanet_wp cardplanet_mysql
-```
-
-### 清理容器
-```bash
-docker rm cardplanet_pma cardplanet_wp cardplanet_mysql
-docker volume prune
-```
-
-## 🌐 访问地址
-
-- **网站**: http://localhost:8080
-- **后台**: http://localhost:8080/wp-admin
-- **数据库**: http://localhost:8081
-- **登录**: petron / Petron12345^
-
-## 📝 开发工作流
-
-1. **启动环境** - 运行MySQL和WordPress容器
-2. **初始化** - 运行初始化脚本
-3. **开发** - 使用WP-CLI进行开发操作
-4. **测试** - 访问网站验证功能
-5. **部署** - 备份并部署到生产环境
 
 ---
 
-**优势**：
-✅ 无需拉取镜像  
-✅ 指定镜像ID，确保一致性  
-✅ WP-CLI专业开发  
-✅ 容器独立，易于管理
+**这个部署方案确保客户收到的是完全配置好的WordPress网站，真正实现"开箱即用"的交付标准。**

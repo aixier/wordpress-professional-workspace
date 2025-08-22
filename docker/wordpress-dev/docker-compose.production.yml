@@ -1,0 +1,100 @@
+# Production-Ready WordPress Environment
+# Complete CLI-based WordPress setup with no manual configuration required
+
+version: '3.8'
+
+services:
+  # WordPress with complete CLI setup
+  wordpress:
+    image: fsotool/wordpress-dev:latest
+    container_name: wordpress-production
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      # Database connection
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: wordpress_prod
+      WORDPRESS_DB_USER: wp_user
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD:-secure_password_123}
+      
+      # Complete WordPress configuration
+      WORDPRESS_AUTO_SETUP: "true"
+      WORDPRESS_TITLE: "My WordPress Site"
+      WORDPRESS_ADMIN_USER: "admin"
+      WORDPRESS_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD:-admin123}
+      WORDPRESS_ADMIN_EMAIL: "admin@example.com"
+      WORDPRESS_URL: "http://localhost"
+      WORDPRESS_LOCALE: "zh_CN"
+      
+      # Theme and plugins (optional)
+      WORDPRESS_THEME: "twentytwentyfour"
+      WORDPRESS_PLUGINS: "contact-form-7,yoast-seo,wordfence"
+      
+      # Production settings
+      WP_DEBUG: "false"
+      WP_DEBUG_LOG: "false"
+      WP_DEBUG_DISPLAY: "false"
+      
+    volumes:
+      # WordPress content persistence
+      - wp_content:/var/www/html/wp-content
+      # Custom themes and plugins
+      - ./themes:/var/www/html/wp-content/themes/custom
+      - ./plugins:/var/www/html/wp-content/plugins/custom
+      # Logs
+      - ./logs:/var/log/wordpress
+      # Backups
+      - ./backups:/var/www/html/backups
+      
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - wordpress-production
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-production
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: wordpress_prod
+      MYSQL_USER: wp_user
+      MYSQL_PASSWORD: ${WP_DB_PASSWORD:-secure_password_123}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - wordpress-production
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Nginx reverse proxy (optional, for production)
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-production
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/ssl/certs:ro
+    depends_on:
+      - wordpress
+    networks:
+      - wordpress-production
+
+volumes:
+  wp_content:
+    driver: local
+  mysql_data:
+    driver: local
+
+networks:
+  wordpress-production:
+    driver: bridge
+    name: wordpress-production-network
